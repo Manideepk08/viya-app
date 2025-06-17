@@ -1,7 +1,7 @@
 // src/components/Navbar.js
 import React from 'react';
 
-const Navbar = ({ onNavigate, onLogout }) => {
+const Navbar = ({ onNavigate, onLogout, isMediator = false }) => {
   return (
     <nav className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 shadow-lg rounded-b-lg">
       <div className="container mx-auto flex flex-wrap items-center justify-between">
@@ -18,10 +18,20 @@ const Navbar = ({ onNavigate, onLogout }) => {
           <span className="text-2xl font-bold tracking-tight">Viya</span>
         </div>
         <div className="flex items-center space-x-4 mt-2 md:mt-0">
-          <button onClick={() => onNavigate('dashboard')} className="hover:text-purple-200 transition-colors">Dashboard</button>
-          <button onClick={() => onNavigate('edit-profile')} className="hover:text-purple-200 transition-colors">Edit Profile</button>
-          <button onClick={() => onNavigate('match-list')} className="hover:text-purple-200 transition-colors">Match List</button>
-          <button onClick={() => onNavigate('settings')} className="hover:text-purple-200 transition-colors">Settings</button>
+          {!isMediator && (
+            <>
+              <button onClick={() => onNavigate('dashboard')} className="hover:text-purple-200 transition-colors">Dashboard</button>
+              <button onClick={() => onNavigate('edit-profile')} className="hover:text-purple-200 transition-colors">Edit Profile</button>
+              <button onClick={() => onNavigate('match-list')} className="hover:text-purple-200 transition-colors">Match List</button>
+              <button onClick={() => onNavigate('settings')} className="hover:text-purple-200 transition-colors">Settings</button>
+            </>
+          )}
+          {isMediator && (
+            <>
+              <button onClick={() => onNavigate('mediator')} className="hover:text-purple-200 transition-colors">Dashboard</button>
+              <button onClick={() => onNavigate('mediator-profile')} className="hover:text-purple-200 transition-colors">Profile</button>
+            </>
+          )}
           <button onClick={onLogout} className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md transition-colors">Logout</button>
         </div>
       </div>

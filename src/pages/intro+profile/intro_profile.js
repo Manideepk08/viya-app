@@ -66,7 +66,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       setOtpError('');
       clearInterval(timerRef.current);
       alert('OTP verified successfully!');
-      onLoginSuccess();
+      onLoginSuccess(isMediator);
     } else {
       setOtpError('Invalid OTP. Please use 123456');
       setOtp('');
@@ -75,7 +75,7 @@ const LoginPage = ({ onLoginSuccess }) => {
 
   const handleGoogleLogin = () => {
     alert('Google login successful!');
-    onLoginSuccess();
+    onLoginSuccess(isMediator);
   };
 
   useEffect(() => {
@@ -244,7 +244,7 @@ const LoginPage = ({ onLoginSuccess }) => {
   );
 };
 
-const ProfilePage = ({ onProfileComplete }) => {
+const ProfilePage = ({ onProfileComplete, isMediator }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     gender: '',
@@ -273,7 +273,13 @@ const ProfilePage = ({ onProfileComplete }) => {
     aboutMe: '',
     lookingFor: '',
     profilePhotos: [],
-    profileVideos: []
+    profileVideos: [],
+    // Mediator-specific fields
+    email: '',
+    phone: '',
+    experience: '',
+    specialization: '',
+    commissionRate: ''
   });
 
   const [photoPreviews, setPhotoPreviews] = useState([]);
@@ -300,9 +306,10 @@ const ProfilePage = ({ onProfileComplete }) => {
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
+    const maxPhotos = isMediator ? 3 : 5;
     
-    if (photoPreviews.length + files.length > 5) {
-      alert('You can upload a maximum of 5 photos');
+    if (photoPreviews.length + files.length > maxPhotos) {
+      alert(`You can upload a maximum of ${maxPhotos} photos`);
       return;
     }
     
@@ -372,43 +379,54 @@ const ProfilePage = ({ onProfileComplete }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Age validation
-    if (formData.dob) {
-      const age = calculateAge(formData.dob);
-      if (age < 18) {
-        alert('You must be at least 18 years old to create a profile.');
+    if (isMediator) {
+      // Mediator profile validation
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.experience) {
+        alert('Please fill in all required fields for mediator profile.');
         return false;
       }
-    }
+      
+      alert('Mediator profile created successfully! Redirecting to mediator dashboard...');
+    } else {
+      // Regular user profile validation
+      // Age validation
+      if (formData.dob) {
+        const age = calculateAge(formData.dob);
+        if (age < 18) {
+          alert('You must be at least 18 years old to create a profile.');
+          return false;
+        }
+      }
 
-    // Photo validation
-    if (formData.profilePhotos.length === 0) {
-      alert('Profile photo is required.');
-      return false;
-    }
-
-    // Gothram validation
-    if (!formData.gothram) {
-      alert('Gothram selection is mandatory.');
-      return false;
-    }
-
-    // Pin code validation
-    if (formData.pinCode && !/^[0-9]{6}$/.test(formData.pinCode)) {
-      alert('Please enter a valid 6-digit pin code.');
-      return false;
-    }
-
-    // About Me word count validation
-    if (formData.aboutMe) {
-      const aboutMeWords = formData.aboutMe.trim().split(/\s+/).length;
-      if (aboutMeWords < 30) {
-        alert('About Me section must contain at least 30 words.');
+      // Photo validation
+      if (formData.profilePhotos.length === 0) {
+        alert('Profile photo is required.');
         return false;
       }
-    }
 
-    alert('Profile created successfully! Redirecting to dashboard...');
+      // Gothram validation
+      if (!formData.gothram) {
+        alert('Gothram selection is mandatory.');
+        return false;
+      }
+
+      // Pin code validation
+      if (formData.pinCode && !/^[0-9]{6}$/.test(formData.pinCode)) {
+        alert('Please enter a valid 6-digit pin code.');
+        return false;
+      }
+
+      // About Me word count validation
+      if (formData.aboutMe) {
+        const aboutMeWords = formData.aboutMe.trim().split(/\s+/).length;
+        if (aboutMeWords < 30) {
+          alert('About Me section must contain at least 30 words.');
+          return false;
+        }
+      }
+
+      alert('Profile created successfully! Redirecting to dashboard...');
+    }
     
     // Call the callback to notify the parent component
     if (onProfileComplete) {
@@ -426,12 +444,14 @@ const ProfilePage = ({ onProfileComplete }) => {
 
   return (
     <div className="layout-container flex h-full grow flex-col relative bg-amber-50" style={{ fontFamily: 'Manrope, Noto Sans, sans-serif' }}>
-      {/* Thoranam image row at the top */}
-      <div className="w-full flex flex-row bg-amber-50" style={{ height: '80px' }}>
-        <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-        <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-        <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-      </div>
+      {/* Thoranam image row at the top - only for regular users */}
+      {!isMediator && (
+        <div className="w-full flex flex-row bg-amber-50" style={{ height: '80px' }}>
+          <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+        </div>
+      )}
       
       {/* Logo Container */}
       <div className="flex justify-center items-center py-4 bg-amber-50">
@@ -446,18 +466,24 @@ const ProfilePage = ({ onProfileComplete }) => {
       <div className="flex-1">
         <div className="px-2 sm:px-4 md:px-6 lg:px-10 flex flex-1 justify-center py-1 relative z-10">
           <div className="layout-content-container flex flex-col max-w-[1200px] flex-1 bg-white rounded-lg shadow-lg p-6 sm:p-8 relative">
-            {/* Little Fingers No Background Image covering entire screen */}
-            <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-              <img src="./littlefingers_nobg.png" alt="Little Fingers No Background" className="w-full h-full object-cover" />
-            </div>
+            {/* Little Fingers No Background Image covering entire screen - only for regular users */}
+            {!isMediator && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                <img src="./littlefingers_nobg.png" alt="Little Fingers No Background" className="w-full h-full object-cover" />
+              </div>
+            )}
             
             <div className="flex flex-wrap justify-between gap-2 p-2 relative z-20">
-              <p className="text-gray-800 tracking-tight text-[20px] sm:text-[24px] font-bold leading-tight min-w-72">Create Your Profile</p>
+              <p className="text-gray-800 tracking-tight text-[20px] sm:text-[24px] font-bold leading-tight min-w-72">
+                {isMediator ? 'Create Mediator Profile' : 'Create Your Profile'}
+              </p>
             </div>
               
-            <form id="profileForm" onSubmit={handleSubmit} className="relative z-20">
+            <form id="profileForm" onSubmit={handleSubmit} className="relative z-20" key={`form-${isMediator}`}>
               {/* Personal Information */}
-              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Personal Information</h3>
+              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">
+                {isMediator ? 'Basic Information' : 'Personal Information'}
+              </h3>
               <div className="flex flex-wrap gap-3 px-3 py-1">
                 <label className="flex flex-col min-w-36 flex-1">
                   <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Full Name <span className="text-red-600 font-bold text-base">*</span></p>
@@ -471,354 +497,466 @@ const ProfilePage = ({ onProfileComplete }) => {
                     className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
                   />
                 </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gender <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="gender"
-                    name="gender"
-                    required
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select your gender</option>
-                    <option value="boy">Boy</option>
-                    <option value="girl">Girl</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Date of Birth <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="dob"
-                    name="dob"
-                    type="date"
-                    required
-                    value={formData.dob}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Marital Status <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="maritalStatus"
-                    name="maritalStatus"
-                    required
-                    value={formData.maritalStatus}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select your marital status</option>
-                    <option value="single">Single</option>
-                    <option value="divorced">Divorced</option>
-                    <option value="widowed">Widowed</option>
-                  </select>
-                </label>
+                
+                {!isMediator && (
+                  <>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gender <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="gender"
+                        name="gender"
+                        required
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select your gender</option>
+                        <option value="boy">Boy</option>
+                        <option value="girl">Girl</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Date of Birth <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="dob"
+                        name="dob"
+                        type="date"
+                        required
+                        value={formData.dob}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Marital Status <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="maritalStatus"
+                        name="maritalStatus"
+                        required
+                        value={formData.maritalStatus}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select your marital status</option>
+                        <option value="single">Single</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+
+                {isMediator === true && (
+                  <>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Email <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        required
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Phone Number <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        required
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Years of Experience <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="experience"
+                        name="experience"
+                        type="number"
+                        min="0"
+                        placeholder="Enter years of experience"
+                        required
+                        value={formData.experience}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                  </>
+                )}
               </div>
 
-              {/* Community Details */}
-              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Community Details</h3>
-              <div className="flex flex-wrap gap-3 px-3 py-1">
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Community <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="community"
-                    name="community"
-                    value="Banjara"
-                    readOnly
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gothram <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="gothram"
-                    name="gothram"
-                    required
-                    value={formData.gothram}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select your gothram</option>
-                    <option value="bharadwaj">Bharadwaj</option>
-                    <option value="kashyap">Kashyap</option>
-                    <option value="gautam">Gautam</option>
-                    <option value="vashistha">Vashistha</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Language</p>
-                  <input
-                    id="language"
-                    name="language"
-                    placeholder="Enter your language"
-                    value={formData.language}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Religion</p>
-                  <select
-                    id="religion"
-                    name="religion"
-                    value={formData.religion}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select your religion</option>
-                    <option value="hindu">Hindu</option>
-                    <option value="muslim">Muslim</option>
-                    <option value="christian">Christian</option>
-                    <option value="sikh">Sikh</option>
-                    <option value="buddhist">Buddhist</option>
-                    <option value="jain">Jain</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Pin Code <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="pinCode"
-                    name="pinCode"
-                    placeholder="Enter your pin code"
-                    required
-                    pattern="[0-9]{6}"
-                    title="Pin code must be 6 digits"
-                    value={formData.pinCode}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-              </div>
+              {!isMediator && (
+                <>
+                  {/* Community Details */}
+                  <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Community Details</h3>
+                  <div className="flex flex-wrap gap-3 px-3 py-1">
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Community <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="community"
+                        name="community"
+                        value="Banjara"
+                        readOnly
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gothram <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="gothram"
+                        name="gothram"
+                        required
+                        value={formData.gothram}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select your gothram</option>
+                        <option value="bharadwaj">Bharadwaj</option>
+                        <option value="kashyap">Kashyap</option>
+                        <option value="gautam">Gautam</option>
+                        <option value="vashistha">Vashistha</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Language</p>
+                      <input
+                        id="language"
+                        name="language"
+                        placeholder="Enter your language"
+                        value={formData.language}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Religion</p>
+                      <select
+                        id="religion"
+                        name="religion"
+                        value={formData.religion}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select your religion</option>
+                        <option value="hindu">Hindu</option>
+                        <option value="muslim">Muslim</option>
+                        <option value="christian">Christian</option>
+                        <option value="sikh">Sikh</option>
+                        <option value="buddhist">Buddhist</option>
+                        <option value="jain">Jain</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Pin Code <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="pinCode"
+                        name="pinCode"
+                        placeholder="Enter your pin code"
+                        required
+                        pattern="[0-9]{6}"
+                        title="Pin code must be 6 digits"
+                        value={formData.pinCode}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
 
               {/* Professional Information */}
-              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Professional Information</h3>
+              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">
+                {isMediator ? 'Professional Information' : 'Professional Information'}
+              </h3>
               <div className="flex flex-wrap gap-3 px-3 py-1">
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Education <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="education"
-                    name="education"
-                    required
-                    value={formData.education}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select your education</option>
-                    <option value="graduate">Graduate</option>
-                    <option value="postgraduate">Post Graduate</option>
-                    <option value="doctorate">Doctorate</option>
-                    <option value="diploma">Diploma</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Job Title</p>
-                  <input
-                    id="jobTitle"
-                    name="jobTitle"
-                    placeholder="Enter your job title"
-                    value={formData.jobTitle}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Company Name</p>
-                  <input
-                    id="companyName"
-                    name="companyName"
-                    placeholder="Enter your company name"
-                    value={formData.companyName}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Monthly Income</p>
-                  <input
-                    id="monthlyIncome"
-                    name="monthlyIncome"
-                    placeholder="Enter your monthly income"
-                    type="number"
-                    value={formData.monthlyIncome}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Work Location - City <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="workCity"
-                    name="workCity"
-                    placeholder="Enter your city"
-                    required
-                    value={formData.workCity}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Work Location - State <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="workState"
-                    name="workState"
-                    placeholder="Enter your state"
-                    required
-                    value={formData.workState}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
+                {!isMediator ? (
+                  <>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Education <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="education"
+                        name="education"
+                        required
+                        value={formData.education}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select your education</option>
+                        <option value="graduate">Graduate</option>
+                        <option value="postgraduate">Post Graduate</option>
+                        <option value="doctorate">Doctorate</option>
+                        <option value="diploma">Diploma</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Job Title</p>
+                      <input
+                        id="jobTitle"
+                        name="jobTitle"
+                        placeholder="Enter your job title"
+                        value={formData.jobTitle}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Company Name</p>
+                      <input
+                        id="companyName"
+                        name="companyName"
+                        placeholder="Enter your company name"
+                        value={formData.companyName}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Monthly Income</p>
+                      <input
+                        id="monthlyIncome"
+                        name="monthlyIncome"
+                        placeholder="Enter your monthly income"
+                        type="number"
+                        value={formData.monthlyIncome}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Work Location - City <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="workCity"
+                        name="workCity"
+                        placeholder="Enter your city"
+                        required
+                        value={formData.workCity}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Work Location - State <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="workState"
+                        name="workState"
+                        placeholder="Enter your state"
+                        required
+                        value={formData.workState}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Specialization</p>
+                      <select
+                        id="specialization"
+                        name="specialization"
+                        value={formData.specialization}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select specialization</option>
+                        <option value="arranged-marriage">Arranged Marriage</option>
+                        <option value="love-marriage">Love Marriage</option>
+                        <option value="inter-caste">Inter-caste Marriage</option>
+                        <option value="inter-religion">Inter-religion Marriage</option>
+                        <option value="nri-marriage">NRI Marriage</option>
+                        <option value="general">General</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Commission Rate (%)</p>
+                      <input
+                        id="commissionRate"
+                        name="commissionRate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="Enter commission rate"
+                        value={formData.commissionRate}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                  </>
+                )}
               </div>
 
               {/* Family Information */}
-              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Family Information</h3>
-              <div className="flex flex-wrap gap-3 px-3 py-1">
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Father's Name <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="fatherName"
-                    name="fatherName"
-                    placeholder="Enter your father's name"
-                    required
-                    value={formData.fatherName}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Mother's Name <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="motherName"
-                    name="motherName"
-                    placeholder="Enter your mother's name"
-                    required
-                    value={formData.motherName}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Siblings</p>
-                  <input
-                    id="siblings"
-                    name="siblings"
-                    placeholder="Enter number of siblings (optional)"
-                    type="number"
-                    value={formData.siblings}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Family Status <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="familyStatus"
-                    name="familyStatus"
-                    required
-                    value={formData.familyStatus}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select family status</option>
-                    <option value="middle">Middle Class</option>
-                    <option value="upper">Upper Class</option>
-                  </select>
-                </label>
-              </div>
+              {!isMediator && (
+                <>
+                  <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Family Information</h3>
+                  <div className="flex flex-wrap gap-3 px-3 py-1">
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Father's Name <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="fatherName"
+                        name="fatherName"
+                        placeholder="Enter your father's name"
+                        required
+                        value={formData.fatherName}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Mother's Name <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="motherName"
+                        name="motherName"
+                        placeholder="Enter your mother's name"
+                        required
+                        value={formData.motherName}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Siblings</p>
+                      <input
+                        id="siblings"
+                        name="siblings"
+                        placeholder="Enter number of siblings (optional)"
+                        type="number"
+                        value={formData.siblings}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Family Status <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="familyStatus"
+                        name="familyStatus"
+                        required
+                        value={formData.familyStatus}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select family status</option>
+                        <option value="middle">Middle Class</option>
+                        <option value="upper">Upper Class</option>
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
 
               {/* Marriage Preferences */}
-              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Marriage Preferences</h3>
-              <div className="flex flex-wrap gap-3 px-3 py-1">
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred Age Range <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="preferredAgeRange"
-                    name="preferredAgeRange"
-                    placeholder="e.g., 25-30"
-                    required
-                    value={formData.preferredAgeRange}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred State <span className="text-red-600 font-bold text-base">*</span></p>
-                  <input
-                    id="preferredState"
-                    name="preferredState"
-                    placeholder="Enter preferred state"
-                    required
-                    value={formData.preferredState}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  />
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred Education <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="preferredEducation"
-                    name="preferredEducation"
-                    required
-                    value={formData.preferredEducation}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select preferred education</option>
-                    <option value="graduate">Graduate</option>
-                    <option value="postgraduate">Post Graduate</option>
-                    <option value="doctorate">Doctorate</option>
-                    <option value="diploma">Diploma</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred Religion</p>
-                  <select
-                    id="preferredReligion"
-                    name="preferredReligion"
-                    value={formData.preferredReligion}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select preferred religion (optional)</option>
-                    <option value="hindu">Hindu</option>
-                    <option value="muslim">Muslim</option>
-                    <option value="christian">Christian</option>
-                    <option value="sikh">Sikh</option>
-                    <option value="buddhist">Buddhist</option>
-                    <option value="jain">Jain</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gotra Exclusion <span className="text-red-600 font-bold text-base">*</span></p>
-                  <select
-                    id="gotraExclusion"
-                    name="gotraExclusion"
-                    required
-                    value={formData.gotraExclusion}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  >
-                    <option value="">Select gotra exclusion option</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </label>
-              </div>
+              {!isMediator && (
+                <>
+                  <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Marriage Preferences</h3>
+                  <div className="flex flex-wrap gap-3 px-3 py-1">
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred Age Range <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="preferredAgeRange"
+                        name="preferredAgeRange"
+                        placeholder="e.g., 25-30"
+                        required
+                        value={formData.preferredAgeRange}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred State <span className="text-red-600 font-bold text-base">*</span></p>
+                      <input
+                        id="preferredState"
+                        name="preferredState"
+                        placeholder="Enter preferred state"
+                        required
+                        value={formData.preferredState}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      />
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred Education <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="preferredEducation"
+                        name="preferredEducation"
+                        required
+                        value={formData.preferredEducation}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select preferred education</option>
+                        <option value="graduate">Graduate</option>
+                        <option value="postgraduate">Post Graduate</option>
+                        <option value="doctorate">Doctorate</option>
+                        <option value="diploma">Diploma</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Preferred Religion</p>
+                      <select
+                        id="preferredReligion"
+                        name="preferredReligion"
+                        value={formData.preferredReligion}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select preferred religion (optional)</option>
+                        <option value="hindu">Hindu</option>
+                        <option value="muslim">Muslim</option>
+                        <option value="christian">Christian</option>
+                        <option value="sikh">Sikh</option>
+                        <option value="buddhist">Buddhist</option>
+                        <option value="jain">Jain</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col min-w-36 flex-1">
+                      <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gotra Exclusion <span className="text-red-600 font-bold text-base">*</span></p>
+                      <select
+                        id="gotraExclusion"
+                        name="gotraExclusion"
+                        required
+                        value={formData.gotraExclusion}
+                        onChange={handleInputChange}
+                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-10 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                      >
+                        <option value="">Select gotra exclusion option</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
 
               {/* Profile Media */}
-              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Profile Media</h3>
+              <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">
+                {isMediator ? 'Profile Media' : 'Profile Media'}
+              </h3>
               
               {/* Photos Section */}
               <div className="px-3 py-1">
-                <p className="text-gray-700 text-xs font-medium leading-normal pb-2">Profile Photos <span className="text-red-600 font-bold text-base">*</span> <span className="text-gray-500 text-xs">(Upload up to 5 photos)</span></p>
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-w-2xl">
+                <p className="text-gray-700 text-xs font-medium leading-normal pb-2">
+                  Profile Photos 
+                  {!isMediator && <span className="text-red-600 font-bold text-base">*</span>}
+                  <span className="text-gray-500 text-xs">
+                    {isMediator ? '(Upload up to 3 photos)' : '(Upload up to 5 photos)'}
+                  </span>
+                </p>
+                <div className={`grid gap-2 max-w-2xl ${isMediator ? 'grid-cols-3' : 'grid-cols-4 sm:grid-cols-5'}`}>
                   {/* Photo previews */}
                   {photoPreviews.map((preview, index) => (
                     <div key={index} className="relative aspect-square w-24 sm:w-28 bg-gray-100 rounded-lg overflow-hidden group">
@@ -836,7 +974,7 @@ const ProfilePage = ({ onProfileComplete }) => {
                   ))}
                   
                   {/* Add Photo Button */}
-                  {photoPreviews.length < 5 && (
+                  {photoPreviews.length < (isMediator ? 3 : 5) && (
                     <div className="aspect-square w-24 sm:w-28 bg-white rounded-lg border-2 border-dashed border-gray-300 p-2 flex items-center justify-center hover:border-orange-300 transition-colors cursor-pointer">
                       <input
                         type="file"
@@ -846,7 +984,7 @@ const ProfilePage = ({ onProfileComplete }) => {
                         className="hidden"
                         multiple
                         onChange={handlePhotoUpload}
-                        required={photoPreviews.length === 0}
+                        required={!isMediator && photoPreviews.length === 0}
                       />
                       <label htmlFor="profilePhotos" className="cursor-pointer text-center w-full h-full flex flex-col items-center justify-center">
                         <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -859,79 +997,88 @@ const ProfilePage = ({ onProfileComplete }) => {
                 </div>
               </div>
 
-              {/* Videos Section */}
-              <div className="px-3 py-1 mt-2">
-                <p className="text-gray-700 text-xs font-medium leading-normal pb-2">Profile Videos <span className="text-gray-500 text-xs">(Upload up to 3 videos)</span></p>
-                <div className="grid grid-cols-3 gap-2 max-w-xl">
-                  {/* Video previews */}
-                  {videoPreviews.map((preview, index) => (
-                    <div key={index} className="relative aspect-square w-24 sm:w-28 bg-gray-100 rounded-lg overflow-hidden group">
-                      <video src={preview.preview} className="w-full h-full object-cover" controls />
-                      <button 
-                        type="button" 
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeVideo(index)}
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                      </button>
+              {!isMediator && (
+                <>
+                  {/* Videos Section */}
+                  <div className="px-3 py-1 mt-2">
+                    <p className="text-gray-700 text-xs font-medium leading-normal pb-2">Profile Videos <span className="text-gray-500 text-xs">(Upload up to 3 videos)</span></p>
+                    <div className="grid grid-cols-3 gap-2 max-w-xl">
+                      {/* Video previews */}
+                      {videoPreviews.map((preview, index) => (
+                        <div key={index} className="relative aspect-square w-24 sm:w-28 bg-gray-100 rounded-lg overflow-hidden group">
+                          <video src={preview.preview} className="w-full h-full object-cover" controls />
+                          <button 
+                            type="button" 
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeVideo(index)}
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {/* Add Video Button */}
+                      {videoPreviews.length < 3 && (
+                        <div className="aspect-square w-24 sm:w-28 bg-white rounded-lg border-2 border-dashed border-gray-300 p-2 flex items-center justify-center hover:border-orange-300 transition-colors cursor-pointer">
+                          <input
+                            type="file"
+                            id="profileVideos"
+                            name="profileVideos"
+                            accept="video/*"
+                            className="hidden"
+                            multiple
+                            onChange={handleVideoUpload}
+                          />
+                          <label htmlFor="profileVideos" className="cursor-pointer text-center w-full h-full flex flex-col items-center justify-center">
+                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <span className="text-xs text-gray-500 mt-1">Add Videos</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  
-                  {/* Add Video Button */}
-                  {videoPreviews.length < 3 && (
-                    <div className="aspect-square w-24 sm:w-28 bg-white rounded-lg border-2 border-dashed border-gray-300 p-2 flex items-center justify-center hover:border-orange-300 transition-colors cursor-pointer">
-                      <input
-                        type="file"
-                        id="profileVideos"
-                        name="profileVideos"
-                        accept="video/*"
-                        className="hidden"
-                        multiple
-                        onChange={handleVideoUpload}
-                      />
-                      <label htmlFor="profileVideos" className="cursor-pointer text-center w-full h-full flex flex-col items-center justify-center">
-                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                        <span className="text-xs text-gray-500 mt-1">Add Videos</span>
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
 
               {/* Bio */}
               <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Bio</h3>
               <div className="flex flex-col sm:flex-row max-w-[1200px] flex-wrap items-end gap-3 px-3 py-1">
                 <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">About Me <span className="text-red-600 font-bold text-base">*</span></p>
+                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">
+                    {isMediator ? 'About Me' : 'About Me'} 
+                    {!isMediator && <span className="text-red-600 font-bold text-base">*</span>}
+                  </p>
                   <textarea
                     id="aboutMe"
                     name="aboutMe"
-                    placeholder="Tell us about yourself (minimum 30 words)"
-                    required
+                    placeholder={isMediator ? "Tell us about your experience as a mediator..." : "Tell us about yourself (minimum 30 words)"}
+                    required={!isMediator}
                     value={formData.aboutMe}
                     onChange={handleInputChange}
                     className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-14 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
                   ></textarea>
                 </label>
               </div>
-              <div className="flex flex-col sm:flex-row max-w-[1200px] flex-wrap items-end gap-3 px-3 py-1">
-                <label className="flex flex-col min-w-36 flex-1">
-                  <p className="text-gray-700 text-xs font-medium leading-normal pb-1">What I'm Looking For <span className="text-red-600 font-bold text-base">*</span></p>
-                  <textarea
-                    id="lookingFor"
-                    name="lookingFor"
-                    placeholder="Describe what you're looking for in a partner"
-                    required
-                    value={formData.lookingFor}
-                    onChange={handleInputChange}
-                    className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-14 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
-                  ></textarea>
-                </label>
-              </div>
+              {!isMediator && (
+                <div className="flex flex-col sm:flex-row max-w-[1200px] flex-wrap items-end gap-3 px-3 py-1">
+                  <label className="flex flex-col min-w-36 flex-1">
+                    <p className="text-gray-700 text-xs font-medium leading-normal pb-1">What I'm Looking For <span className="text-red-600 font-bold text-base">*</span></p>
+                    <textarea
+                      id="lookingFor"
+                      name="lookingFor"
+                      placeholder="Describe what you're looking for in a partner"
+                      required
+                      value={formData.lookingFor}
+                      onChange={handleInputChange}
+                      className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-14 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
+                    ></textarea>
+                  </label>
+                </div>
+              )}
 
               {/* Form Buttons */}
               <div className="flex flex-wrap items-end gap-3 px-3 py-2">
@@ -957,21 +1104,28 @@ const ProfilePage = ({ onProfileComplete }) => {
   );
 };
 
-const App = ({ onProfileComplete }) => {
+const App = ({ onProfileComplete, isMediator: externalIsMediator }) => {
   const [showProfile, setShowProfile] = useState(false);
+  const [isMediator, setIsMediator] = useState(externalIsMediator || false);
+  
+  const handleLoginSuccess = (mediatorStatus) => {
+    setIsMediator(mediatorStatus);
+    // Always show profile page after login, regardless of mediator status
+    setShowProfile(true);
+  };
 
   const handleProfileComplete = () => {
     if (onProfileComplete) {
-      onProfileComplete();
+      onProfileComplete(isMediator);
     }
   };
 
   return (
     <div className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-red-500 via-orange-500 to-red-600 group/design-root overflow-x-hidden" id="appContainer">
       {!showProfile ? (
-        <LoginPage onLoginSuccess={() => setShowProfile(true)} />
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
       ) : (
-        <ProfilePage onProfileComplete={handleProfileComplete} />
+        <ProfilePage onProfileComplete={handleProfileComplete} isMediator={isMediator} />
       )}
     </div>
   );
