@@ -1,179 +1,725 @@
-// src/pages/EditProfilePage.js
 import React, { useState } from 'react';
-import Button from '../../components/dashboard/button.js'; // Fixed path
-import Modal from '../../components/dashboard/modal.js';   // Fixed path
-import { indianStates, indianCities } from '../../data/mockdata.js'; // Fixed path
+import Button from '../../components/dashboard/button.js';
+import Modal from '../../components/dashboard/modal.js';
 
 const EditProfilePage = () => {
-  const [profileData, setProfileData] = useState({
-    name: 'Your Name',
-    age: 25,
-    city: 'Hyderabad',
-    state: 'Telangana',
-    education: 'B.Tech',
-    job: 'Software Developer',
-    bio: 'Write something about yourself...',
-    photoUrl: 'https://placehold.co/150x150/A0A0A0/ffffff?text=Upload+Photo',
-  });
-
+  const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalTitle, setModalTitle] = useState('');
   const [showConfirmButton, setShowConfirmButton] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData((prevData) => ({ ...prevData, [name]: value }));
-  };
+  // Sample profile data - in real app, this would come from backend/context
+  const [profileData, setProfileData] = useState({
+    // Basic Personal Details
+    firstName: 'John',
+    lastName: 'Doe',
+    gender: 'male',
+    dob: '1995-05-15',
+    maritalStatus: 'single',
+    height: "5'8\"",
+    weight: '70',
+    bloodGroup: 'O+',
+    photos: ['https://placehold.co/150x150/A0A0A0/ffffff?text=Photo+1'],
+    video: null,
+    aboutMe: 'I am a software developer with a passion for technology and innovation. I enjoy reading, traveling, and spending time with family.',
+    
+    // Contact Information
+    phone: '9876543210',
+    email: 'john.doe@example.com',
+    aadhar: '123456789012',
+    residingAddress: {
+      address: '123 Main Street',
+      village: 'Downtown',
+      city: 'Hyderabad',
+      state: 'Telangana',
+      pincode: '500001'
+    },
+    nativeAddress: {
+      address: '456 Native Street',
+      village: 'Hometown',
+      city: 'Warangal',
+      state: 'Telangana',
+      pincode: '506001'
+    },
+    sameAddress: false,
+    
+    // Education and Occupation
+    education: [
+      { level: 'degree', stream: 'Computer Science', institute: 'JNTU Hyderabad' },
+      { level: 'postgraduate', stream: 'Software Engineering', institute: 'IIIT Hyderabad' }
+    ],
+    employeeRole: 'Senior Software Developer',
+    company: 'Tech Solutions Inc.',
+    annualSalary: '800000',
+    workLocation: { city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    
+    // Family Details
+    familyType: 'nuclear',
+    familyStatus: 'middle',
+    fatherName: 'Robert Doe',
+    fatherOccupation: 'Engineer',
+    motherName: 'Mary Doe',
+    motherOccupation: 'Teacher',
+    parentsTogether: true,
+    siblings: [
+      { relation: 'elder', gender: 'female', occupation: 'Doctor' }
+    ],
+    
+    // Cultural and Religion
+    religion: 'Hindu',
+    community: 'Banjara',
+    gothram: 'Vashishta',
+    motherTongue: 'Telugu',
+    zodiacSign: 'leo',
+    
+    // Lifestyle, Habits, Health
+    dietaryHabits: 'vegetarian',
+    smoking: 'never',
+    drinking: 'never',
+    hobbies: 'Reading, Traveling, Photography, Cooking',
+    disabilities: '',
+    medicalConditions: ''
+  });
 
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileData((prevData) => ({ ...prevData, photoUrl: reader.result }));
-      };
-      reader.readAsDataURL(file);
+  const [editableData, setEditableData] = useState({ ...profileData });
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (name.startsWith('residingAddress.') || name.startsWith('nativeAddress.')) {
+      const [addrType, field] = name.split('.');
+      setEditableData((prev) => ({
+        ...prev,
+        [addrType]: { ...prev[addrType], [field]: value },
+      }));
+    } else if (type === 'checkbox') {
+      setEditableData((prev) => ({ ...prev, [name]: checked }));
+      if (name === 'sameAddress' && checked) {
+        setEditableData((prev) => ({
+          ...prev,
+          nativeAddress: { ...prev.residingAddress },
+        }));
+      }
+    } else {
+      setEditableData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // In a real app, you'd send this data to a backend
-    console.log('Profile Updated:', profileData);
+  const handleEducationChange = (idx, field, value) => {
+    const newEducation = [...editableData.education];
+    newEducation[idx][field] = value;
+    setEditableData((prev) => ({ ...prev, education: newEducation }));
+  };
+
+  const addEducation = () => {
+    setEditableData((prev) => ({ 
+      ...prev, 
+      education: [...prev.education, { level: '', stream: '', institute: '' }] 
+    }));
+  };
+
+  const removeEducation = (idx) => {
+    setEditableData((prev) => ({ 
+      ...prev, 
+      education: prev.education.filter((_, i) => i !== idx) 
+    }));
+  };
+
+  const handleSiblingChange = (idx, field, value) => {
+    const newSiblings = [...editableData.siblings];
+    newSiblings[idx] = { ...newSiblings[idx], [field]: value };
+    setEditableData((prev) => ({ ...prev, siblings: newSiblings }));
+  };
+
+  const addSibling = () => {
+    setEditableData((prev) => ({ 
+      ...prev, 
+      siblings: [...prev.siblings, { relation: '', gender: '', occupation: '' }] 
+    }));
+  };
+
+  const removeSibling = (idx) => {
+    setEditableData((prev) => ({ 
+      ...prev, 
+      siblings: prev.siblings.filter((_, i) => i !== idx) 
+    }));
+  };
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (editableData.photos.length + files.length > 5) {
+      alert('You can upload a maximum of 5 photos');
+      return;
+    }
+    const newPhotos = [...editableData.photos, ...files.map(file => URL.createObjectURL(file))];
+    setEditableData((prev) => ({ ...prev, photos: newPhotos }));
+  };
+
+  const removePhoto = (index) => {
+    setEditableData((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditableData({ ...profileData });
+  };
+
+  const handleSave = () => {
+    setProfileData({ ...editableData });
+    setIsEditing(false);
     setModalTitle('Profile Updated');
     setModalMessage('Your profile has been successfully updated!');
     setShowConfirmButton(false);
     setIsModalOpen(true);
   };
 
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditableData({ ...profileData });
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
   };
 
+  const renderField = (label, value, type = 'text', options = null) => {
+    if (isEditing) {
+      if (type === 'select' && options) {
+        return (
+          <select 
+            value={value} 
+            onChange={handleChange}
+            name={label.toLowerCase().replace(/\s+/g, '')}
+            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            {options.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        );
+      }
+      return (
+        <input
+          type={type}
+          value={value}
+          onChange={handleChange}
+          name={label.toLowerCase().replace(/\s+/g, '')}
+          className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+        />
+      );
+    }
+    return (
+      <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+        {value || 'Not specified'}
+      </div>
+    );
+  };
+
+  const renderSection = (title, fields) => (
+    <div className="mb-8">
+      <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">{title}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {fields}
+      </div>
+    </div>
+  );
+
   return (
     <div className="container mx-auto p-6 bg-white shadow-xl rounded-lg mt-8">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-3">Edit Your Profile</h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex flex-col items-center space-y-4 mb-6">
-          <img
-            src={profileData.photoUrl}
-            alt="Profile Preview"
-            className="w-32 h-32 rounded-full object-cover border-4 border-purple-300 shadow-md"
-          />
-          <label htmlFor="photo-upload" className="cursor-pointer">
-            <Button variant="secondary" type="button" className="text-sm">
-              Upload New Photo
-            </Button>
-            <input
-              id="photo-upload"
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-          </label>
-        </div>
+      <div className="flex justify-between items-center mb-6 border-b pb-3">
+        <h2 className="text-3xl font-bold text-gray-800">Profile Information</h2>
+        {!isEditing && (
+          <Button onClick={handleEdit} variant="primary">
+            Edit Profile
+          </Button>
+        )}
+      </div>
 
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={profileData.name}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          />
+      {/* Profile Photo Section */}
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Profile Photos</h3>
+        <div className="flex flex-wrap gap-4">
+          {profileData.photos.map((photo, index) => (
+            <div key={index} className="relative">
+              <img
+                src={photo}
+                alt={`Profile ${index + 1}`}
+                className="w-32 h-32 rounded-lg object-cover border-2 border-gray-300"
+              />
+              {isEditing && (
+                <button
+                  onClick={() => removePhoto(index)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          {isEditing && (
+            <label className="cursor-pointer">
+              <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                <span className="text-gray-500">+ Add Photo</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+          )}
         </div>
-        <div>
-          <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-          <input
-            type="number"
-            id="age"
-            name="age"
-            value={profileData.age}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            min="18"
-            max="100"
-            required
-          />
+      </div>
+
+      {/* Basic Personal Details */}
+      {renderSection('Basic Personal Details', [
+        <div key="name">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+          {isEditing ? (
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                name="firstName"
+                value={editableData.firstName}
+                onChange={handleChange}
+                placeholder="First Name"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <input
+                name="lastName"
+                value={editableData.lastName}
+                onChange={handleChange}
+                placeholder="Last Name"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          ) : (
+            <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+              {`${profileData.firstName} ${profileData.lastName}`}
+            </div>
+          )}
+        </div>,
+        <div key="gender">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+          {renderField('Gender', profileData.gender, 'select', [
+            { value: '', label: 'Select Gender' },
+            { value: 'male', label: 'Male' },
+            { value: 'female', label: 'Female' },
+            { value: 'other', label: 'Other' }
+          ])}
+        </div>,
+        <div key="dob">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+          {renderField('Date of Birth', profileData.dob, 'date')}
+        </div>,
+        <div key="marital">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
+          {renderField('Marital Status', profileData.maritalStatus, 'select', [
+            { value: '', label: 'Select Marital Status' },
+            { value: 'single', label: 'Single' },
+            { value: 'divorced', label: 'Divorced' },
+            { value: 'widowed', label: 'Widowed' }
+          ])}
+        </div>,
+        <div key="height">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+          {renderField('Height', profileData.height)}
+        </div>,
+        <div key="weight">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+          {renderField('Weight', profileData.weight, 'number')}
+        </div>,
+        <div key="blood">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Blood Group</label>
+          {renderField('Blood Group', profileData.bloodGroup)}
         </div>
-        <div>
-          <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">State</label>
-          <select
-            id="state"
-            name="state"
-            value={profileData.state}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          >
-            <option value="">Select State</option>
-            {indianStates.map((state) => (
-              <option key={state} value={state}>{state}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">City</label>
-          <select
-            id="city"
-            name="city"
-            value={profileData.city}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          >
-            <option value="">Select City</option>
-            {indianCities.map((city) => (
-              <option key={city} value={city}>{city}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="education" className="block text-sm font-medium text-gray-700 mb-1">Education</label>
-          <input
-            type="text"
-            id="education"
-            name="education"
-            value={profileData.education}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="job" className="block text-sm font-medium text-gray-700 mb-1">Job</label>
-          <input
-            type="text"
-            id="job"
-            name="job"
-            value={profileData.job}
-            onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+      ])}
+
+      {/* About Me */}
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">About Me</h3>
+        {isEditing ? (
           <textarea
-            id="bio"
-            name="bio"
-            value={profileData.bio}
+            name="aboutMe"
+            value={editableData.aboutMe}
             onChange={handleChange}
             rows="4"
             className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          ></textarea>
+          />
+        ) : (
+          <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+            {profileData.aboutMe || 'No description provided'}
+          </div>
+        )}
+      </div>
+
+      {/* Contact Information */}
+      {renderSection('Contact Information', [
+        <div key="phone">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+          {renderField('Phone', profileData.phone, 'tel')}
+        </div>,
+        <div key="email">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          {renderField('Email', profileData.email, 'email')}
+        </div>,
+        <div key="aadhar">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Number</label>
+          {renderField('Aadhar', profileData.aadhar)}
+        </div>
+      ])}
+
+      {/* Residing Address */}
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Residing Address</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(profileData.residingAddress).map(([key, value]) => (
+            <div key={key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+              </label>
+              {isEditing ? (
+                <input
+                  name={`residingAddress.${key}`}
+                  value={editableData.residingAddress[key]}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              ) : (
+                <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  {value || 'Not specified'}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Native Address */}
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Native Address</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Object.entries(profileData.nativeAddress).map(([key, value]) => (
+            <div key={key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                {key.replace(/([A-Z])/g, ' $1').trim()}
+              </label>
+              {isEditing ? (
+                <input
+                  name={`nativeAddress.${key}`}
+                  value={editableData.nativeAddress[key]}
+                  onChange={handleChange}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              ) : (
+                <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  {value || 'Not specified'}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Education and Occupation */}
+      <div className="mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Education and Occupation</h3>
+        
+        {/* Education */}
+        <div className="mb-6">
+          <h4 className="text-lg font-semibold mb-3">Education</h4>
+          {profileData.education.map((edu, idx) => (
+            <div key={idx} className="mb-4 p-4 border border-gray-200 rounded-lg">
+              {isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <select
+                    value={editableData.education[idx].level}
+                    onChange={(e) => handleEducationChange(idx, 'level', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">Education Level</option>
+                    <option value="10th">10th</option>
+                    <option value="inter/diploma">Inter/Diploma</option>
+                    <option value="degree">Degree/Graduate</option>
+                    <option value="postgraduate">Post Graduate</option>
+                  </select>
+                  <input
+                    value={editableData.education[idx].stream}
+                    onChange={(e) => handleEducationChange(idx, 'stream', e.target.value)}
+                    placeholder="Stream"
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={editableData.education[idx].institute}
+                      onChange={(e) => handleEducationChange(idx, 'institute', e.target.value)}
+                      placeholder="Institute Name"
+                      className="flex-1 p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <button
+                      onClick={() => removeEducation(idx)}
+                      className="px-3 py-3 bg-red-500 text-white rounded-md"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                    {edu.level || 'Not specified'}
+                  </div>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                    {edu.stream || 'Not specified'}
+                  </div>
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                    {edu.institute || 'Not specified'}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {isEditing && (
+            <button
+              onClick={addEducation}
+              className="bg-green-500 text-white px-4 py-2 rounded-md"
+            >
+              Add Education
+            </button>
+          )}
         </div>
 
-        <div className="flex justify-end">
-          <Button type="submit">Save Changes</Button>
+        {/* Occupation */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Employee Role</label>
+            {renderField('Employee Role', profileData.employeeRole)}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+            {renderField('Company', profileData.company)}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Annual Salary</label>
+            {renderField('Annual Salary', profileData.annualSalary)}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Work Location</label>
+            {isEditing ? (
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  name="workLocation.city"
+                  value={editableData.workLocation.city}
+                  onChange={handleChange}
+                  placeholder="City"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <input
+                  name="workLocation.state"
+                  value={editableData.workLocation.state}
+                  onChange={handleChange}
+                  placeholder="State"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <input
+                  name="workLocation.country"
+                  value={editableData.workLocation.country}
+                  onChange={handleChange}
+                  placeholder="Country"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            ) : (
+              <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+                {`${profileData.workLocation.city}, ${profileData.workLocation.state}, ${profileData.workLocation.country}`}
+              </div>
+            )}
+          </div>
         </div>
-      </form>
+      </div>
+
+      {/* Family Details */}
+      {renderSection('Family Details', [
+        <div key="familyType">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Family Type</label>
+          {renderField('Family Type', profileData.familyType, 'select', [
+            { value: '', label: 'Select Family Type' },
+            { value: 'nuclear', label: 'Nuclear' },
+            { value: 'joint', label: 'Joint' },
+            { value: 'others', label: 'Others' }
+          ])}
+        </div>,
+        <div key="familyStatus">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Family Status</label>
+          {renderField('Family Status', profileData.familyStatus, 'select', [
+            { value: '', label: 'Select Family Status' },
+            { value: 'lower', label: 'Lower' },
+            { value: 'middle', label: 'Middle' },
+            { value: 'upper', label: 'Upper' }
+          ])}
+        </div>,
+        <div key="fatherName">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Father's Name</label>
+          {renderField('Father Name', profileData.fatherName)}
+        </div>,
+        <div key="fatherOccupation">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Father's Occupation</label>
+          {renderField('Father Occupation', profileData.fatherOccupation)}
+        </div>,
+        <div key="motherName">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
+          {renderField('Mother Name', profileData.motherName)}
+        </div>,
+        <div key="motherOccupation">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Occupation</label>
+          {renderField('Mother Occupation', profileData.motherOccupation)}
+        </div>
+      ])}
+
+      {/* Cultural and Religion */}
+      {renderSection('Cultural and Religion', [
+        <div key="religion">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Religion</label>
+          {renderField('Religion', profileData.religion, 'select', [
+            { value: '', label: 'Select Religion' },
+            { value: 'hindu', label: 'Hindu' },
+            { value: 'muslim', label: 'Muslim' },
+            { value: 'christian', label: 'Christian' },
+            { value: 'sikh', label: 'Sikh' },
+            { value: 'buddhist', label: 'Buddhist' },
+            { value: 'jain', label: 'Jain' },
+            { value: 'other', label: 'Other' }
+          ])}
+        </div>,
+        <div key="community">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Community</label>
+          {renderField('Community', profileData.community)}
+        </div>,
+        <div key="gothram">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Gothram</label>
+          {renderField('Gothram', profileData.gothram)}
+        </div>,
+        <div key="motherTongue">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mother Tongue</label>
+          {renderField('Mother Tongue', profileData.motherTongue)}
+        </div>,
+        <div key="zodiacSign">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Zodiac Sign</label>
+          {renderField('Zodiac Sign', profileData.zodiacSign, 'select', [
+            { value: '', label: 'Select Zodiac Sign' },
+            { value: 'aries', label: 'Aries' },
+            { value: 'taurus', label: 'Taurus' },
+            { value: 'gemini', label: 'Gemini' },
+            { value: 'cancer', label: 'Cancer' },
+            { value: 'leo', label: 'Leo' },
+            { value: 'virgo', label: 'Virgo' },
+            { value: 'libra', label: 'Libra' },
+            { value: 'scorpio', label: 'Scorpio' },
+            { value: 'sagittarius', label: 'Sagittarius' },
+            { value: 'capricorn', label: 'Capricorn' },
+            { value: 'aquarius', label: 'Aquarius' },
+            { value: 'pisces', label: 'Pisces' }
+          ])}
+        </div>
+      ])}
+
+      {/* Lifestyle, Habits, Health */}
+      {renderSection('Lifestyle, Habits, and Health', [
+        <div key="dietaryHabits">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Dietary Habits</label>
+          {renderField('Dietary Habits', profileData.dietaryHabits, 'select', [
+            { value: '', label: 'Select Dietary Habits' },
+            { value: 'vegan', label: 'Vegan' },
+            { value: 'vegetarian', label: 'Vegetarian' },
+            { value: 'non-vegetarian', label: 'Non Vegetarian' },
+            { value: 'eggetarian', label: 'Eggetarian' }
+          ])}
+        </div>,
+        <div key="smoking">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Smoking</label>
+          {renderField('Smoking', profileData.smoking, 'select', [
+            { value: '', label: 'Select Smoking Preference' },
+            { value: 'never', label: 'Never' },
+            { value: 'occasionally', label: 'Occasionally' },
+            { value: 'regularly', label: 'Regularly' }
+          ])}
+        </div>,
+        <div key="drinking">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Drinking</label>
+          {renderField('Drinking', profileData.drinking, 'select', [
+            { value: '', label: 'Select Drinking Preference' },
+            { value: 'never', label: 'Never' },
+            { value: 'occasionally', label: 'Occasionally' },
+            { value: 'regularly', label: 'Regularly' }
+          ])}
+        </div>,
+        <div key="hobbies">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Hobbies and Interests</label>
+          {isEditing ? (
+            <textarea
+              name="hobbies"
+              value={editableData.hobbies}
+              onChange={handleChange}
+              rows="3"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          ) : (
+            <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+              {profileData.hobbies || 'Not specified'}
+            </div>
+          )}
+        </div>,
+        <div key="disabilities">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Physical Disabilities</label>
+          {isEditing ? (
+            <textarea
+              name="disabilities"
+              value={editableData.disabilities}
+              onChange={handleChange}
+              rows="3"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          ) : (
+            <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+              {profileData.disabilities || 'None'}
+            </div>
+          )}
+        </div>,
+        <div key="medicalConditions">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Medical Conditions</label>
+          {isEditing ? (
+            <textarea
+              name="medicalConditions"
+              value={editableData.medicalConditions}
+              onChange={handleChange}
+              rows="3"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          ) : (
+            <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
+              {profileData.medicalConditions || 'None'}
+            </div>
+          )}
+        </div>
+      ])}
+
+      {/* Action Buttons */}
+      {isEditing && (
+        <div className="flex justify-end space-x-4 mt-8 pt-6 border-t">
+          <Button onClick={handleCancel} variant="secondary">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} variant="primary">
+            Save Changes
+          </Button>
+        </div>
+      )}
+
       <Modal
         title={modalTitle}
         message={modalMessage}

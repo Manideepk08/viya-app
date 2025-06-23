@@ -1,81 +1,112 @@
 import React, { useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import IntroProfileApp from './pages/intro+profile/intro_profile';
 import Navbar from './components/dashboard/navbar';
 import Footer from './components/dashboard/footer';
-import DashboardPage from './pages/Dashboard/DashboardPage';
-import MatchListPage from './pages/Dashboard/MatchListPage';
+import UnifiedDashboardPage from './pages/Dashboard/UnifiedDashboardPage';
 import EditProfilePage from './pages/Dashboard/EditProfilePage';
 import SettingsPage from './pages/Dashboard/SettingsPage';
 import MediatorDashboard from './pages/Mediator/mediator_page';
 import MediatorProfilePage from './pages/Mediator/MediatorProfilePage';
+import PaymentMethods from './pages/payments-FAQ/payment_methods';
+import HelpFAQ from './pages/payments-FAQ/HelpFAQ';
+import Matchlist from './pages/Dashboard/Matchlist';
+import MediatorProfileViewEdit from './pages/Mediator/MediatorProfileViewEdit';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('intro');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMediator, setIsMediator] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
+  const [sentInterests, setSentInterests] = useState([]);
+  const [likedProfiles, setLikedProfiles] = useState([]);
+  const navigate = useNavigate();
 
-  const handleLoginSuccess = (mediatorStatus: boolean) => {
-    setIsMediator(mediatorStatus);
-    // Don't set as logged in yet - show profile creation first
-    setShowProfile(true);
-  };
-
-  const handleProfileComplete = () => {
-    // Now set as logged in and go to appropriate dashboard
+  const handleProfileComplete = (isMediator: boolean) => {
     setIsLoggedIn(true);
     if (isMediator) {
-      setCurrentPage('mediator');
+      navigate('/mediator');
     } else {
-      setCurrentPage('dashboard');
+      navigate('/dashboard');
     }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setCurrentPage('intro');
     setIsMediator(false);
-    setShowProfile(false);
+    navigate('/');
   };
 
-  // If not logged in and not showing profile, show intro/login page
-  if (!isLoggedIn && !showProfile) {
-    return <IntroProfileApp onProfileComplete={handleLoginSuccess} isMediator={false} />;
-  }
+  const handleMediatorProfileComplete = () => {
+    setIsLoggedIn(true);
+    navigate('/mediator');
+  };
 
-  // If showing profile creation (either mediator or regular user)
-  if (showProfile && !isLoggedIn) {
-    return <IntroProfileApp onProfileComplete={handleProfileComplete} isMediator={isMediator} />;
-  }
-
-  // If logged in as mediator, show only mediator dashboard
-  if (isLoggedIn && isMediator) {
-    return (
-      <div className="min-h-screen flex flex-col font-sans bg-amber-50 antialiased">
-        <Navbar onNavigate={setCurrentPage} onLogout={handleLogout} isMediator={true} />
-        <main className="flex-grow pb-8">
-          {currentPage === 'mediator' && <MediatorDashboard />}
-          {currentPage === 'mediator-profile' && <MediatorProfilePage />}
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // If logged in as regular user, show the main app with navigation
   return (
     <div className="min-h-screen flex flex-col font-sans bg-amber-50 antialiased">
-      <Navbar onNavigate={setCurrentPage} onLogout={handleLogout} isMediator={false} />
-
-      <main className="flex-grow pb-8">
-        {currentPage === 'dashboard' && <DashboardPage />}
-        {currentPage === 'edit-profile' && <EditProfilePage />}
-        {currentPage === 'match-list' && <MatchListPage />}
-        {currentPage === 'settings' && <SettingsPage />}
-      </main>
-
-      <Footer />
+      <Routes>
+        <Route path="/" element={<IntroProfileApp onProfileComplete={handleProfileComplete} isMediator={false} />} />
+        <Route path="/payment-methods" element={<PaymentMethods />} />
+        <Route path="/help-faq" element={<HelpFAQ />} />
+        <Route path="/mediator-profile-view" element={<MediatorProfileViewEdit />} />
+        <Route path="/mediator" element={
+          <>
+            <main className="flex-grow pb-8">
+              <MediatorDashboard />
+            </main>
+            <Footer />
+          </>
+        } />
+        {isLoggedIn && (
+          <>
+            <Route path="/dashboard" element={
+              <>
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <main className="flex-grow pb-8">
+                  <UnifiedDashboardPage
+                    sentInterests={sentInterests}
+                    setSentInterests={setSentInterests}
+                    likedProfiles={likedProfiles}
+                    setLikedProfiles={setLikedProfiles}
+                    onNavigate={navigate}
+                  />
+                </main>
+                <Footer />
+              </>
+            } />
+            <Route path="/matchlist" element={
+              <>
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <main className="flex-grow pb-8">
+                  <Matchlist
+                    sentInterests={sentInterests}
+                    likedProfiles={likedProfiles}
+                    onNavigate={() => navigate}
+                  />
+                </main>
+                <Footer />
+              </>
+            } />
+            <Route path="/edit-profile" element={
+              <>
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <main className="flex-grow pb-8">
+                  {isMediator ? <MediatorProfilePage onProfileComplete={handleMediatorProfileComplete} /> : <EditProfilePage />}
+                </main>
+                <Footer />
+              </>
+            } />
+            <Route path="/settings" element={
+              <>
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <main className="flex-grow pb-8">
+                  <SettingsPage />
+                </main>
+                <Footer />
+              </>
+            } />
+          </>
+        )}
+      </Routes>
     </div>
   );
 }

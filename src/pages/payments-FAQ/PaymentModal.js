@@ -1,136 +1,92 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './PaymentModal.css';
 
-const PaymentModal = ({ show, onClose, amount = 199 }) => {
-  const [paymentMethod, setPaymentMethod] = useState('razorpay');
-  const [paymentStatus, setPaymentStatus] = useState('idle');
+const mediatorFeatures = [
+  { text: 'Initiates communication through a mediator', check: true },
+  { text: 'Ensures user privacy', check: true },
+  { text: 'Amount auto-deducted upon request', check: true },
+  { text: 'Affordable for limited budget', check: true },
+  { text: 'Simple, guided process', check: true },
+  { text: 'Mediator facilitates initial conversations', check: true },
+  { text: 'Direct contact', check: false },
+  { text: 'Premium features', check: false },
+];
 
-  const handlePayment = async () => {
-    setPaymentStatus('processing');
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (paymentMethod === 'razorpay') {
-        const options = {
-          key: process.env.REACT_APP_RAZORPAY_KEY,
-          amount: amount * 100,
-          currency: 'INR',
-          name: 'Matrimony App',
-          description: 'Send Interest Payment',
-          handler: function(response) {
-            setPaymentStatus('success');
-            console.log('Payment ID:', response.razorpay_payment_id);
-          },
-          prefill: {
-            name: 'User Name',
-            email: 'user@example.com',
-            contact: '9876543210'
-          },
-          theme: {
-            color: '#6a1b9a'
-          }
-        };
-        
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setPaymentStatus('success');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      setPaymentStatus('failed');
+const directFeatures = [
+  { text: 'Direct contact on mutual interest', check: true },
+  { text: 'Instant, direct engagement', check: true },
+  { text: 'Premium option', check: true },
+  { text: 'Amount charged after acceptance', check: true },
+  { text: 'Requires proactive engagement', check: true },
+  { text: 'Best for quick responses', check: true },
+  { text: 'Privacy via mediator', check: false },
+  { text: 'Budget-friendly', check: false },
+];
+
+const PaymentModal = ({ show, onClose }) => {
+  const navigate = useNavigate();
+  if (!show) return null;
+
+  // On select, close modal and navigate to payment methods page with amount
+  const handleSelect = (amount) => {
+    onClose();
+    navigate('/payment-methods', { state: { amount } });
+  };
+
+  // Close modal if overlay is clicked
+  const handleOverlayClick = (e) => {
+    if (e.target.classList.contains('payment-modal-overlay')) {
+      onClose();
     }
   };
 
-  if (!show) return null;
+  const renderFeatures = (features) => (
+    <ul className="feature-list">
+      {features.map((f, i) => (
+        <li key={i} className={f.check ? 'feature-check' : 'feature-cross'}>
+          {f.check ? (
+            <span className="icon-check">✔</span>
+          ) : (
+            <span className="icon-cross">✖</span>
+          )}
+          {f.text}
+        </li>
+      ))}
+    </ul>
+  );
 
-  return React.createElement('div', { className: 'payment-modal-overlay' },
-    React.createElement('div', { className: 'payment-modal' },
-      React.createElement('button', { 
-        className: 'close-btn', 
-        onClick: onClose 
-      }, '×'),
-      
-      React.createElement('h3', null, 'Send Interest'),
-      React.createElement('p', { className: 'payment-amount' }, `Amount: ₹${amount}`),
-      
-      paymentStatus === 'success' ? (
-        React.createElement('div', { className: 'payment-success' },
-          React.createElement('svg', { viewBox: '0 0 24 24' },
-            React.createElement('path', { fill: 'currentColor', d: 'M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z' })
-          ),
-          React.createElement('p', null, 'Payment successful! Your interest has been sent.'),
-          React.createElement('button', { 
-            className: 'btn btn-primary', 
-            onClick: onClose 
-          }, 'Close')
-        )
-      ) : (
-        React.createElement(React.Fragment, null,
-          React.createElement('div', { className: 'payment-methods' },
-            React.createElement('label', { 
-              className: paymentMethod === 'razorpay' ? 'active' : '' 
-            },
-              React.createElement('input', {
-                type: 'radio',
-                name: 'paymentMethod',
-                value: 'razorpay',
-                checked: paymentMethod === 'razorpay',
-                onChange: () => setPaymentMethod('razorpay')
-              }),
-              React.createElement('img', { 
-                src: '/payment-icons/razorpay.png', 
-                alt: 'Razorpay' 
-              })
-            ),
-            
-            React.createElement('label', { 
-              className: paymentMethod === 'stripe' ? 'active' : '' 
-            },
-              React.createElement('input', {
-                type: 'radio',
-                name: 'paymentMethod',
-                value: 'stripe',
-                checked: paymentMethod === 'stripe',
-                onChange: () => setPaymentMethod('stripe')
-              }),
-              React.createElement('img', { 
-                src: '/payment-icons/stripe.png', 
-                alt: 'Stripe' 
-              })
-            )
-          ),
-          
-          React.createElement('button', {
-            className: 'btn btn-primary pay-now-btn',
-            onClick: handlePayment,
-            disabled: paymentStatus === 'processing'
-          },
-            paymentStatus === 'processing' ? (
-              React.createElement(React.Fragment, null,
-                React.createElement('span', { className: 'spinner' }),
-                ' Processing...'
-              )
-            ) : 'Pay Now'
-          ),
-          
-          paymentStatus === 'failed' && (
-            React.createElement('div', { className: 'payment-error' },
-              'Payment failed. Please try again or use a different method.'
-            )
-          ),
-          
-          React.createElement('div', { className: 'payment-security' },
-            React.createElement('svg', { viewBox: '0 0 24 24' },
-              React.createElement('path', { fill: 'currentColor', d: 'M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.1 14.8,9.5V11C15.4,11 16,11.6 16,12.3V15.8C16,16.4 15.4,17 14.7,17H9.2C8.6,17 8,16.4 8,15.7V12.2C8,11.6 8.6,11 9.2,11V9.5C9.2,8.1 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,9.5V11H13.5V9.5C13.5,8.7 12.8,8.2 12,8.2Z' })
-            ),
-            React.createElement('span', null, `Secure payment processed via ${paymentMethod === 'razorpay' ? 'Razorpay' : 'Stripe'}`)
-          )
-        )
-      )
-    )
+  return (
+    <div className="payment-modal-overlay" onClick={handleOverlayClick}>
+      <div className="payment-modal card-modal" onClick={e => e.stopPropagation()}>
+        <button className="close-btn" onClick={onClose}>&times;</button>
+        <div className="card-modal-title">Choose your connection method</div>
+        <div className="card-options-row">
+          <div className="payment-card mediator-card">
+            <div className="card-ribbon mediator-ribbon">₹199</div>
+            <div className="card-title mediator-title">Mediator</div>
+            {renderFeatures(mediatorFeatures)}
+            <button
+              className="card-select-btn mediator-btn"
+              onClick={() => handleSelect(199)}
+            >
+              SELECT
+            </button>
+          </div>
+          <div className="payment-card direct-card">
+            <div className="card-ribbon direct-ribbon">₹3,000</div>
+            <div className="card-title direct-title">Direct Chat</div>
+            {renderFeatures(directFeatures)}
+            <button
+              className="card-select-btn direct-btn"
+              onClick={() => handleSelect(3000)}
+            >
+              SELECT
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

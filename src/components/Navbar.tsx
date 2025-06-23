@@ -5,7 +5,7 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => (
-  <nav className="bg-white shadow-lg">
+  <nav className="bg-orange-500 shadow-lg">
     <div className="max-w-7xl mx-auto px-4">
       <div className="flex justify-between h-16">
         <div className="flex items-center">

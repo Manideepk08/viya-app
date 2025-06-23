@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const MediatorProfilePage = () => {
+const MediatorProfilePage = ({ onProfileComplete }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,6 +17,7 @@ const MediatorProfilePage = () => {
 
   const [photoPreviews, setPhotoPreviews] = useState([]);
   const [certificationFiles, setCertificationFiles] = useState([]);
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -59,8 +61,11 @@ const MediatorProfilePage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Save to localStorage
+    localStorage.setItem('mediatorProfile', JSON.stringify(formData));
     alert('Mediator profile updated successfully!');
-    // Here you would typically send the data to your backend
+    if (onProfileComplete) onProfileComplete();
+    navigate('/mediator');
   };
 
   return (

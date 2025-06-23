@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ProfilePageUser from './ProfilePage';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [mobileEmail, setMobileEmail] = useState('');
@@ -97,7 +99,7 @@ const LoginPage = ({ onLoginSuccess }) => {
         <div className="flex justify-center items-center pt-8 pb-4">
           <div className="flex items-center gap-4 text-white">
             <h1 className="text-white text-3xl font-bold leading-tight tracking-[-0.015em] drop-shadow-lg">Viya</h1>
-            <img src="./logo_nobg.png" alt="Viya Matrimony Logo" className="h-24 w-auto drop-shadow-lg" />
+            <img src="/logo_nobg.png" alt="Viya Matrimony Logo" className="h-24 w-auto drop-shadow-lg" />
             <h1 className="text-white text-3xl font-bold leading-tight tracking-[-0.015em] drop-shadow-lg">Matrimony</h1>
           </div>
         </div>
@@ -447,9 +449,9 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
       {/* Thoranam image row at the top - only for regular users */}
       {!isMediator && (
         <div className="w-full flex flex-row bg-amber-50" style={{ height: '80px' }}>
-          <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-          <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-          <img src="./thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
         </div>
       )}
       
@@ -457,7 +459,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
       <div className="flex justify-center items-center py-4 bg-amber-50">
         <div className="flex items-center gap-4">
           <h1 className="text-[#1a0f10] text-2xl font-bold leading-tight tracking-[-0.015em]">Viya</h1>
-          <img src="./logo_nobg.png" alt="Viya Matrimony Logo" className="h-16 w-auto" />
+          <img src="/logo_nobg.png" alt="Viya Matrimony Logo" className="h-16 w-auto" />
           <h1 className="text-[#1a0f10] text-2xl font-bold leading-tight tracking-[-0.015em]">Matrimony</h1>
         </div>
       </div>
@@ -469,7 +471,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
             {/* Little Fingers No Background Image covering entire screen - only for regular users */}
             {!isMediator && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                <img src="./littlefingers_nobg.png" alt="Little Fingers No Background" className="w-full h-full object-cover" />
+                <img src="/littlefingers_nobg.png" alt="Little Fingers No Background" className="w-full h-full object-cover" />
               </div>
             )}
             
@@ -1110,14 +1112,7 @@ const App = ({ onProfileComplete, isMediator: externalIsMediator }) => {
   
   const handleLoginSuccess = (mediatorStatus) => {
     setIsMediator(mediatorStatus);
-    // Always show profile page after login, regardless of mediator status
     setShowProfile(true);
-  };
-
-  const handleProfileComplete = () => {
-    if (onProfileComplete) {
-      onProfileComplete(isMediator);
-    }
   };
 
   return (
@@ -1125,7 +1120,9 @@ const App = ({ onProfileComplete, isMediator: externalIsMediator }) => {
       {!showProfile ? (
         <LoginPage onLoginSuccess={handleLoginSuccess} />
       ) : (
-        <ProfilePage onProfileComplete={handleProfileComplete} isMediator={isMediator} />
+        isMediator
+          ? <ProfilePage onProfileComplete={() => onProfileComplete(true)} isMediator={true} />
+          : <ProfilePageUser onProfileComplete={() => onProfileComplete(false)} />
       )}
     </div>
   );

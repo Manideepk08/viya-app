@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import MediatorNavbar from '../../components/mediator_navbar';
 
 const MediatorDashboard = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [showProfileCard, setShowProfileCard] = useState(false);
   const [selectedMatchProfile, setSelectedMatchProfile] = useState('');
   const [showCommissionTracker, setShowCommissionTracker] = useState(false);
+  const [currentSection, setCurrentSection] = useState('dashboard');
+  const [dummyState, setDummyState] = useState(false);
+  const [matchRequestStatuses, setMatchRequestStatuses] = useState([]);
 
   const assignedProfiles = [
     { 
@@ -121,6 +125,11 @@ const MediatorDashboard = () => {
     { id: 5, profile: "Vikram Rao", amount: 6000, status: "Paid", date: "2025-06-08" },
   ]);
 
+  useEffect(() => {
+    setMatchRequestStatuses(matchRequests.map(r => r.status || 'Pending'));
+    // eslint-disable-next-line
+  }, []);
+
   const handleProfileClick = (profile) => {
     setSelectedProfile(profile);
     setShowProfileCard(true);
@@ -178,13 +187,30 @@ const MediatorDashboard = () => {
             </button>
           </div>
 
+          {/* Photo Gallery */}
+          {profile.photos && profile.photos.length > 0 && (
+            <div className="flex gap-3 mb-6 overflow-x-auto">
+              {profile.photos.map((photo, idx) => (
+                <img
+                  key={idx}
+                  src={photo}
+                  alt={`Profile ${idx + 1}`}
+                  className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
+                />
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Basic Information */}
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Basic Information</h3>
               <div className="space-y-2">
+                <p><span className="font-medium">Name:</span> {profile.name}</p>
                 <p><span className="font-medium">Age:</span> {profile.age} years</p>
+                <p><span className="font-medium">Gender:</span> {profile.gender}</p>
                 <p><span className="font-medium">Location:</span> {profile.location}</p>
+                <p><span className="font-medium">Status:</span> {profile.status}</p>
                 <p><span className="font-medium">Marital Status:</span> {profile.maritalStatus}</p>
                 <p><span className="font-medium">Religion:</span> {profile.religion}</p>
                 <p><span className="font-medium">Community:</span> {profile.community}</p>
@@ -209,67 +235,38 @@ const MediatorDashboard = () => {
             <h3 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-3">About Me</h3>
             <p className="text-gray-600 leading-relaxed">{profile.aboutMe}</p>
           </div>
-
-          {/* Matching Section */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Add Potential Match</h3>
-            <div className="flex gap-3">
-              <select
-                value={selectedMatchProfile}
-                onChange={(e) => setSelectedMatchProfile(e.target.value)}
-                className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
-              >
-                <option value="">Select a profile to match</option>
-                {availableProfiles.map(profile => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name} ({profile.age} years, {profile.location}, {profile.education})
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleAddMatch}
-                disabled={!selectedMatchProfile}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Add Match
-              </button>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="mt-6 flex gap-3">
-            <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
-              Update Status
-            </button>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-              View Matches
-            </button>
-            <button className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600">
-              Contact Profile
-            </button>
-          </div>
         </div>
       </div>
     </div>
   );
 
-  const MatchRequestCard = ({ request }) => (
-    <div className="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
+  const MatchRequestCard = ({ request, idx, onStatusChange }) => (
+    <div className="bg-white p-4 rounded-lg shadow-md flex flex-col md:flex-row md:items-center md:justify-between">
       <div>
         <h3 className="font-semibold text-lg">{request.from} ↔ {request.to}</h3>
         <p className="text-gray-600">Date: {request.date}</p>
       </div>
-      <div className="flex space-x-2">
-        <button className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+      <div className="flex space-x-2 mt-3 md:mt-0">
+        <button
+          className={`px-3 py-1 rounded ${matchRequestStatuses[idx] === 'Accepted' ? 'bg-green-400 text-white' : 'bg-green-500 text-white hover:bg-green-600'}`}
+          disabled={matchRequestStatuses[idx] === 'Accepted'}
+          onClick={() => onStatusChange(idx, 'Accepted')}
+        >
           Accept
         </button>
-        <button className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+        <button
+          className={`px-3 py-1 rounded ${matchRequestStatuses[idx] === 'Rejected' ? 'bg-red-400 text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}
+          disabled={matchRequestStatuses[idx] === 'Rejected'}
+          onClick={() => onStatusChange(idx, 'Rejected')}
+        >
           Reject
         </button>
         <span className={`px-3 py-1 rounded-full text-sm ${
-          request.status === "Accepted" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+          matchRequestStatuses[idx] === 'Accepted' ? 'bg-green-100 text-green-700' :
+          matchRequestStatuses[idx] === 'Rejected' ? 'bg-red-100 text-red-700' :
+          'bg-yellow-100 text-yellow-700'
         }`}>
-          {request.status}
+          {matchRequestStatuses[idx] || 'Pending'}
         </span>
       </div>
     </div>
@@ -303,114 +300,101 @@ const MediatorDashboard = () => {
   const maleProfiles = assignedProfiles.filter(profile => profile.gender === "Male");
   const femaleProfiles = assignedProfiles.filter(profile => profile.gender === "Female");
 
+  // Navigation handlers
+  const handleProfile = () => {
+    window.location.href = '/mediator-profile';
+  };
+  const handleLogout = () => {
+    window.location.href = '/';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Mediator Dashboard</h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Match Requests - Left Column */}
-          <div className="lg:col-span-1 bg-gray-50 p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">Match Requests</h2>
-            <div className="space-y-4">
-              {matchRequests.map(request => (
-                <MatchRequestCard key={request.id} request={request} />
+    <div className="min-h-screen bg-gray-100">
+      <MediatorNavbar onProfile={handleProfile} onLogout={handleLogout} onNavigate={setCurrentSection} />
+      <div className="max-w-7xl mx-auto p-6">
+        {currentSection === 'dashboard' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
+              <div className="text-4xl font-bold text-orange-500 mb-2">{assignedProfiles.length}</div>
+              <div className="text-lg font-semibold text-gray-700">Assigned Profiles</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
+              <div className="text-4xl font-bold text-orange-500 mb-2">{matchRequests.length}</div>
+              <div className="text-lg font-semibold text-gray-700">Match Requests</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center justify-center">
+              <div className="text-4xl font-bold text-orange-500 mb-2">{commissions.length}</div>
+              <div className="text-lg font-semibold text-gray-700">Commission Tracker</div>
+            </div>
+          </div>
+        )}
+        {currentSection === 'match-requests' && (
+          <div className="bg-white rounded-lg shadow p-6 w-full flex flex-col items-center">
+            <div className="text-2xl font-bold mb-4">Match Requests</div>
+            <div className="text-4xl font-bold text-orange-500 mb-6">{matchRequests.length}</div>
+            <div className="w-full max-w-2xl space-y-4">
+              {matchRequests.map((req, idx) => (
+                <MatchRequestCard key={req.id} request={req} idx={idx} onStatusChange={(i, newStatus) => {
+                  setMatchRequestStatuses(statuses => {
+                    const updated = [...statuses];
+                    updated[i] = newStatus;
+                    return updated;
+                  });
+                }} />
               ))}
             </div>
           </div>
-
-          {/* Assigned Profiles - Center and Right Columns */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Male Profiles */}
-            <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">
-                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm mr-3">Male</span>
-                Assigned Male Profiles ({maleProfiles.length})
-              </h2>
-              <div className="space-y-4">
-                {maleProfiles.map(profile => (
-                  <ProfileCard key={profile.id} profile={profile} />
-                ))}
-                {maleProfiles.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No male profiles assigned yet.</p>
-                )}
+        )}
+        {currentSection === 'assigned-profiles' && (
+          <div className="bg-white rounded-lg shadow p-6 w-full flex flex-col items-center">
+            <div className="text-2xl font-bold mb-4">Assigned Profiles</div>
+            <div className="text-4xl font-bold text-orange-500 mb-6">{assignedProfiles.length}</div>
+            <div className="w-full flex flex-col md:flex-row gap-8">
+              {/* Male Profiles */}
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold text-blue-600 mb-4 text-center">Males</h3>
+                <div className="space-y-4">
+                  {maleProfiles.length > 0 ? maleProfiles.map(profile => (
+                    <div key={profile.id} onClick={() => handleProfileClick(profile)}>
+                      <ProfileCard profile={profile} />
+                    </div>
+                  )) : <div className="text-gray-400 text-center">No male profiles assigned.</div>}
+                </div>
               </div>
-            </div>
-
-            {/* Female Profiles */}
-            <div className="bg-gray-50 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">
-                <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm mr-3">Female</span>
-                Assigned Female Profiles ({femaleProfiles.length})
-              </h2>
-              <div className="space-y-4">
-                {femaleProfiles.map(profile => (
-                  <ProfileCard key={profile.id} profile={profile} />
-                ))}
-                {femaleProfiles.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No female profiles assigned yet.</p>
-                )}
+              {/* Female Profiles */}
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold text-pink-600 mb-4 text-center">Females</h3>
+                <div className="space-y-4">
+                  {femaleProfiles.length > 0 ? femaleProfiles.map(profile => (
+                    <div key={profile.id} onClick={() => handleProfileClick(profile)}>
+                      <ProfileCard profile={profile} />
+                    </div>
+                  )) : <div className="text-gray-400 text-center">No female profiles assigned.</div>}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Commission Tracker - Expandable Box */}
-        <div className="mt-6 bg-gray-50 rounded-lg shadow-md">
-          <button
-            onClick={() => setShowCommissionTracker(!showCommissionTracker)}
-            className="w-full p-6 text-left flex justify-between items-center hover:bg-gray-100 transition-colors"
-          >
-            <h2 className="text-xl font-semibold text-gray-700">Commission Tracker</h2>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">
-                {commissions.filter(c => c.status === "Paid").length} Paid | 
-                {commissions.filter(c => c.status === "Pending").length} Pending | 
-                {commissions.filter(c => c.status === "Failed").length} Failed
-              </span>
-              <svg 
-                className={`w-5 h-5 text-gray-600 transition-transform ${showCommissionTracker ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </button>
-          
-          {showCommissionTracker && (
-            <div className="px-6 pb-6">
-              <div className="space-y-4">
-                {commissions.map(commission => (
-                  <CommissionCard key={commission.id} commission={commission} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Match Status Update */}
-        <div className="mt-6 bg-gray-50 p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">Update Match Status</h2>
-          <div className="flex space-x-4">
-            <select className="p-2 border rounded-lg">
-              <option>Select Profile</option>
-              {assignedProfiles.map(profile => (
-                <option key={profile.id} value={profile.id}>{profile.name}</option>
+        )}
+        {currentSection === 'commission-tracker' && (
+          <div className="bg-white rounded-lg shadow p-6 w-full flex flex-col items-center">
+            <div className="text-2xl font-bold mb-4">Commission Tracker</div>
+            <div className="text-4xl font-bold text-orange-500 mb-6">{commissions.length}</div>
+            <ul className="w-full max-w-2xl divide-y">
+              {commissions.map(c => (
+                <li key={c.id} className="py-3 flex flex-col md:flex-row md:items-center md:justify-between">
+                  <span><b>Profile:</b> {c.profile}</span>
+                  <span className="text-sm text-gray-500">Amount: ₹{c.amount} | Status: {c.status} | Date: {c.date}</span>
+                </li>
               ))}
-            </select>
-            <select className="p-2 border rounded-lg">
-              <option>Select Status</option>
-              <option>Active</option>
-              <option>Pending</option>
-              <option>Closed</option>
-            </select>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-              Update Status
-            </button>
+            </ul>
           </div>
-        </div>
+        )}
+        {currentSection === 'add-user' && (
+          <div className="bg-white rounded-lg shadow p-6 w-full flex flex-col items-center">
+            <div className="text-2xl font-bold mb-4">Add User</div>
+            <div className="text-gray-500">(Add user form or functionality here)</div>
+          </div>
+        )}
       </div>
 
       {/* Profile Detail Modal */}

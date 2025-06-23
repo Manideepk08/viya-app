@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import './HelpFAQ.css';
+import React, { useEffect, useState } from 'react';
 
 const faqData = [
   {
@@ -24,9 +23,63 @@ const faqData = [
   }
 ];
 
+const TABS = [
+  { key: 'privacy', label: 'Privacy Policy' },
+  { key: 'terms', label: 'Terms of Service' },
+  { key: 'contact', label: 'Contact Us' },
+  { key: 'faq', label: 'FAQ' },
+];
+
+const tabContent = {
+  privacy: (
+    <div>
+      <h2 className="text-xl font-bold mb-2">Privacy Policy</h2>
+      <ul className="list-disc pl-6 space-y-2">
+        <li>Your privacy is important to us. We are committed to protecting your personal information and your right to privacy.</li>
+        <li>When you use our service, we may collect certain information such as your name, contact details, and profile information to provide and improve our services.</li>
+        <li>We do not share your personal information with third parties except as necessary to provide our services or as required by law.</li>
+        <li>We use industry-standard security measures to protect your data.</li>
+        <li>By using our service, you consent to our collection and use of your information as described in this policy.</li>
+        <li>If you have any questions or concerns about our privacy practices, please contact us at <a href="mailto:support@viya.com" className="text-orange-600 underline">support@viya.com</a>.</li>
+      </ul>
+    </div>
+  ),
+  terms: (
+    <div>
+      <h2 className="text-xl font-bold mb-2">Terms of Service</h2>
+      <ul className="list-disc pl-6 space-y-2">
+        <li>By using our website and services, you agree to comply with and be bound by the following terms and conditions.</li>
+        <li>You must be at least 18 years old to use our service.</li>
+        <li>You are responsible for maintaining the confidentiality of your account information and for all activities that occur under your account.</li>
+        <li>You agree not to use our service for any unlawful or prohibited activities.</li>
+        <li>We reserve the right to modify or terminate our service at any time without notice.</li>
+        <li>We are not responsible for any damages or losses resulting from your use of our service.</li>
+        <li>Your continued use of the service constitutes your acceptance of any changes to these terms.</li>
+        <li>If you do not agree with any part of these terms, please do not use our service.</li>
+      </ul>
+    </div>
+  ),
+  contact: <div><h2 className="text-xl font-bold mb-2">Contact Us</h2><p>Contact us at support@viya.com or call 1800-123-456.</p></div>,
+  faq: <div><h2 className="text-xl font-bold mb-2">FAQ</h2><p>Frequently Asked Questions will appear here...</p></div>,
+};
+
+const getInitialTab = () => {
+  // Check for ?tab= in the URL
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab && TABS.some(t => t.key === tab)) return tab;
+  return 'privacy';
+};
+
 const HelpFAQ = () => {
+  const [activeTab, setActiveTab] = useState(getInitialTab());
   const [activeIndex, setActiveIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    // Update URL when tab changes (optional)
+    window.history.replaceState(null, '', `?tab=${activeTab}`);
+  }, [activeTab]);
 
   const toggleFAQ = (index) => {
     setActiveIndex(activeIndex === index ? null : index);
@@ -37,100 +90,65 @@ const HelpFAQ = () => {
     faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  return React.createElement('div', { className: 'help-faq-container' },
-    React.createElement('div', { className: 'help-header' },
-      React.createElement('h1', null, 'Help Center'),
-      React.createElement('p', null, 'Find answers to common questions')
-    ),
-    
-    React.createElement('div', { className: 'search-container' },
-      React.createElement('div', { className: 'search-box' },
-        React.createElement('svg', { viewBox: '0 0 24 24' },
-          React.createElement('path', { fill: 'currentColor', d: 'M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z' })
-        ),
-        React.createElement('input', {
-          type: 'text',
-          placeholder: 'Search help articles...',
-          value: searchTerm,
-          onChange: (e) => setSearchTerm(e.target.value)
-        })
-      )
-    ),
-    
-    React.createElement('div', { className: 'faq-section' },
-      React.createElement('h2', null, 'Frequently Asked Questions'),
-      
-      filteredFAQs.length > 0 ? (
-        React.createElement('div', { className: 'faq-list' },
-          filteredFAQs.map((faq, index) => 
-            React.createElement('div', { 
-              key: index,
-              className: `faq-item ${activeIndex === index ? 'active' : ''}`,
-              onClick: () => toggleFAQ(index)
-            },
-              React.createElement('div', { className: 'faq-question' },
-                React.createElement('h4', null, faq.question),
-                React.createElement('svg', { viewBox: '0 0 24 24' },
-                  React.createElement('path', { fill: 'currentColor', d: 'M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z' })
-                )
-              ),
-              activeIndex === index && (
-                React.createElement('div', { className: 'faq-answer' },
-                  React.createElement('p', null, faq.answer)
-                )
-              )
-            )
-          )
-        )
-      ) : (
-        React.createElement('div', { className: 'no-results' },
-          React.createElement('svg', { viewBox: '0 0 24 24' },
-            React.createElement('path', { fill: 'currentColor', d: 'M15.5,12C18,12 20,14 20,16.5C20,17.38 19.75,18.21 19.31,18.9L22.39,22L21,23.39L17.88,20.32C17.19,20.75 16.37,21 15.5,21C13,21 11,19 11,16.5C11,14 13,12 15.5,12M15.5,14A2.5,2.5 0 0,0 13,16.5A2.5,2.5 0 0,0 15.5,19A2.5,2.5 0 0,0 18,16.5A2.5,2.5 0 0,0 15.5,14M10,4A4,4 0 0,1 14,8C14,8.91 13.69,9.75 13.18,10.43C12.32,10.75 11.55,11.26 10.91,11.9L10,12A4,4 0 0,1 6,8A4,4 0 0,1 10,4M2,20V18C2,15.88 5.31,14.14 9.5,14C9.18,14.78 9,15.62 9,16.5C9,17.79 9.38,19 10,20H2Z' })
-          ),
-          React.createElement('p', null, `No results found for "${searchTerm}"`)
-        )
-      )
-    ),
-    
-    React.createElement('div', { className: 'contact-section' },
-      React.createElement('h3', null, 'Still need help?'),
-      React.createElement('p', null, 'Our support team is available to assist you'),
-      
-      React.createElement('div', { className: 'contact-methods' },
-        React.createElement('div', { className: 'contact-card' },
-          React.createElement('div', { className: 'contact-icon' },
-            React.createElement('svg', { viewBox: '0 0 24 24' },
-              React.createElement('path', { fill: 'currentColor', d: 'M22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6M20 6L12 11L4 6H20M20 18H4V8L12 13L20 8V18Z' })
-            )
-          ),
-          React.createElement('h4', null, 'Email Support'),
-          React.createElement('p', null, 'support@matrimonyapp.com'),
-          React.createElement('p', null, 'Typically responds within 24 hours')
-        ),
-        
-        React.createElement('div', { className: 'contact-card' },
-          React.createElement('div', { className: 'contact-icon' },
-            React.createElement('svg', { viewBox: '0 0 24 24' },
-              React.createElement('path', { fill: 'currentColor', d: 'M6.62,10.79C8.06,13.62 10.38,15.94 13.21,17.38L15.41,15.18C15.69,14.9 16.08,14.82 16.43,14.93C17.55,15.3 18.75,15.5 20,15.5A1,1 0 0,1 21,16.5V20A1,1 0 0,1 20,21A17,17 0 0,1 3,4A1,1 0 0,1 4,3H7.5A1,1 0 0,1 8.5,4C8.5,5.25 8.7,6.45 9.07,7.57C9.18,7.92 9.1,8.31 8.82,8.59L6.62,10.79Z' })
-            )
-          ),
-          React.createElement('h4', null, 'Call Us'),
-          React.createElement('p', null, '+91 9876543210'),
-          React.createElement('p', null, 'Mon-Sat, 10AM to 7PM')
-        ),
-        
-        React.createElement('div', { className: 'contact-card' },
-          React.createElement('div', { className: 'contact-icon' },
-            React.createElement('svg', { viewBox: '0 0 24 24' },
-              React.createElement('path', { fill: 'currentColor', d: 'M12,3C16.97,3 21,7.03 21,12C21,16.97 16.97,21 12,21C7.03,21 3,16.97 3,12C3,7.03 7.03,3 12,3M12,5C8.14,5 5,8.14 5,12C5,15.86 8.14,19 12,19C15.86,19 19,15.86 19,12C19,8.14 15.86,5 12,5M11,13V15H13V13H11M11,7V12H13V7H11Z' })
-            )
-          ),
-          React.createElement('h4', null, 'Live Chat'),
-          React.createElement('p', null, 'Click the chat icon below'),
-          React.createElement('p', null, 'Available 9AM-8PM daily')
-        )
-      )
-    )
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar with logo */}
+      <nav className="bg-orange-500 p-4 text-white font-bold text-lg flex items-center">
+        <img src="/logo_nobg.png" alt="Viya Matrimony Logo" className="h-10 w-auto mr-3" />
+        <span>Viya Matrimony</span>
+      </nav>
+      <div className="max-w-3xl mx-auto mt-8 bg-white rounded-lg shadow p-6">
+        <div className="flex space-x-4 border-b mb-6 pb-2">
+          {TABS.map(tab => (
+            <button
+              key={tab.key}
+              className={`pb-2 px-4 font-semibold border-b-2 transition-colors ${activeTab === tab.key ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-orange-500'}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4">
+          {activeTab === 'faq' ? (
+            <div>
+              <h2 className="text-xl font-bold mb-4">FAQ</h2>
+              <input
+                type="text"
+                placeholder="Search questions..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <div>
+                {filteredFAQs.length === 0 ? (
+                  <p className="text-gray-500">No questions found.</p>
+                ) : (
+                  filteredFAQs.map((faq, idx) => (
+                    <div key={idx} className="mb-3 border-b">
+                      <button
+                        className="w-full text-left flex justify-between items-center py-2 font-medium focus:outline-none"
+                        onClick={() => toggleFAQ(idx)}
+                      >
+                        <span>{faq.question}</span>
+                        <span>{activeIndex === idx ? '−' : '+'}</span>
+                      </button>
+                      {activeIndex === idx && (
+                        <div className="pl-2 pb-2 text-gray-700 animate-fade-in">
+                          {faq.answer}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : (
+            tabContent[activeTab]
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -74,6 +74,53 @@ const Filters = ({ filters, onFilterChange, onApplyFilters }) => {
             <option value="B.E. (Mechanical)">B.E. (Mechanical)</option>
           </select>
         </div>
+        <div>
+          <label htmlFor="height" className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+          <select
+            id="height"
+            name="height"
+            value={filters.height || ''}
+            onChange={onFilterChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">Any</option>
+            <option value="below-5ft">Below 5ft</option>
+            <option value="5ft-5ft5in">5ft - 5ft 5in</option>
+            <option value="5ft6in-6ft">5ft 6in - 6ft</option>
+            <option value="above-6ft">Above 6ft</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="annualIncome" className="block text-sm font-medium text-gray-700 mb-1">Annual Income</label>
+          <select
+            id="annualIncome"
+            name="annualIncome"
+            value={filters.annualIncome || ''}
+            onChange={onFilterChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">Any</option>
+            <option value="below-2L">Below 2L</option>
+            <option value="2L-5L">2L - 5L</option>
+            <option value="5L-10L">5L - 10L</option>
+            <option value="10L+">10L+</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="familyType" className="block text-sm font-medium text-gray-700 mb-1">Family Type</label>
+          <select
+            id="familyType"
+            name="familyType"
+            value={filters.familyType || ''}
+            onChange={onFilterChange}
+            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">Any</option>
+            <option value="nuclear">Nuclear</option>
+            <option value="joint">Joint</option>
+            <option value="others">Others</option>
+          </select>
+        </div>
       </div>
       <div className="mt-6 flex justify-end">
         <Button onClick={onApplyFilters}>Apply Filters</Button>

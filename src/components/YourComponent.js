@@ -1,0 +1,1 @@
+import { mockProfiles, indianStates, indianCities } from '../data/mockdata.js';
