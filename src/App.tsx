@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import IntroProfileApp from './pages/intro+profile/intro_profile';
@@ -7,24 +7,38 @@ import Footer from './components/dashboard/footer';
 import UnifiedDashboardPage from './pages/Dashboard/UnifiedDashboardPage';
 import EditProfilePage from './pages/Dashboard/EditProfilePage';
 import SettingsPage from './pages/Dashboard/SettingsPage';
-import MediatorDashboard from './pages/Mediator/mediator_page';
-import MediatorProfilePage from './pages/Mediator/MediatorProfilePage';
+import ManagerDashboard from './pages/Manager/manager_page';
+import ManagerProfilePage from './pages/Manager/ManagerProfilePage';
 import PaymentMethods from './pages/payments-FAQ/payment_methods';
 import HelpFAQ from './pages/payments-FAQ/HelpFAQ';
 import Matchlist from './pages/Dashboard/Matchlist';
-import MediatorProfileViewEdit from './pages/Mediator/MediatorProfileViewEdit';
+import ManagerProfileViewEdit from './pages/Manager/ManagerProfileViewEdit';
+import MediatorAssigned from './pages/payments-FAQ/mediator_assigned';
+import WelcomePage from './pages/welcomepages-main/WelcomePage';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isMediator, setIsMediator] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const [sentInterests, setSentInterests] = useState([]);
   const [likedProfiles, setLikedProfiles] = useState([]);
+  const [directChatProfiles, setDirectChatProfiles] = useState([]);
   const navigate = useNavigate();
 
-  const handleProfileComplete = (isMediator: boolean) => {
+  // On mount, load directChatProfiles from localStorage
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('directChatProfiles') || '[]');
+    setDirectChatProfiles(stored);
+  }, []);
+
+  // Keep localStorage in sync when directChatProfiles changes
+  useEffect(() => {
+    localStorage.setItem('directChatProfiles', JSON.stringify(directChatProfiles));
+  }, [directChatProfiles]);
+
+  const handleProfileComplete = (isManager: boolean) => {
     setIsLoggedIn(true);
-    if (isMediator) {
-      navigate('/mediator');
+    if (isManager) {
+      navigate('/manager');
     } else {
       navigate('/dashboard');
     }
@@ -32,81 +46,84 @@ function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setIsMediator(false);
+    setIsManager(false);
     navigate('/');
   };
 
-  const handleMediatorProfileComplete = () => {
+  const handleManagerProfileComplete = () => {
     setIsLoggedIn(true);
-    navigate('/mediator');
+    navigate('/manager');
   };
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-amber-50 antialiased">
       <Routes>
-        <Route path="/" element={<IntroProfileApp onProfileComplete={handleProfileComplete} isMediator={false} />} />
+        <Route path="/" element={<WelcomePage />} />
+        <Route path="/intro-profile" element={<IntroProfileApp onProfileComplete={handleProfileComplete} isManager={false} />} />
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/help-faq" element={<HelpFAQ />} />
-        <Route path="/mediator-profile-view" element={<MediatorProfileViewEdit />} />
-        <Route path="/mediator" element={
+        <Route path="/manager-profile-view" element={<ManagerProfileViewEdit />} />
+        <Route path="/manager" element={
           <>
             <main className="flex-grow pb-8">
-              <MediatorDashboard />
+              <ManagerDashboard />
             </main>
-            <Footer />
           </>
         } />
+        <Route path="/manager-assigned" element={<MediatorAssigned />} />
         {isLoggedIn && (
           <>
             <Route path="/dashboard" element={
               <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
                 <main className="flex-grow pb-8">
                   <UnifiedDashboardPage
                     sentInterests={sentInterests}
                     setSentInterests={setSentInterests}
                     likedProfiles={likedProfiles}
                     setLikedProfiles={setLikedProfiles}
+                    directChatProfiles={directChatProfiles}
+                    setDirectChatProfiles={setDirectChatProfiles}
                     onNavigate={navigate}
                   />
                 </main>
-                <Footer />
               </>
             } />
             <Route path="/matchlist" element={
               <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
                 <main className="flex-grow pb-8">
                   <Matchlist
                     sentInterests={sentInterests}
                     likedProfiles={likedProfiles}
+                    directChatProfiles={directChatProfiles}
                     onNavigate={() => navigate}
                   />
                 </main>
-                <Footer />
               </>
             } />
             <Route path="/edit-profile" element={
               <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
                 <main className="flex-grow pb-8">
-                  {isMediator ? <MediatorProfilePage onProfileComplete={handleMediatorProfileComplete} /> : <EditProfilePage />}
+                  {isManager ? <ManagerProfilePage onProfileComplete={handleManagerProfileComplete} /> : <EditProfilePage />}
                 </main>
-                <Footer />
               </>
             } />
             <Route path="/settings" element={
               <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isMediator={isMediator} />
+                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
                 <main className="flex-grow pb-8">
                   <SettingsPage />
                 </main>
-                <Footer />
               </>
             } />
           </>
         )}
       </Routes>
+      <div className="w-full bg-gray-900 text-gray-200 text-center py-2 text-xs mt-12">
+        © 2024 Viya Matrimony. All rights reserved.
+      </div>
     </div>
   );
 }

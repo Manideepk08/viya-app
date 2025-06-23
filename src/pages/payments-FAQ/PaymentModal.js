@@ -24,14 +24,17 @@ const directFeatures = [
   { text: 'Budget-friendly', check: false },
 ];
 
-const PaymentModal = ({ show, onClose }) => {
+const PaymentModal = ({ show, onClose, profileId, onSelectPayment }) => {
   const navigate = useNavigate();
   if (!show) return null;
 
-  // On select, close modal and navigate to payment methods page with amount
+  // On select, call onSelectPayment and navigate to payment methods page with amount and profileId
   const handleSelect = (amount) => {
+    if (onSelectPayment) {
+      onSelectPayment(amount, profileId);
+    }
     onClose();
-    navigate('/payment-methods', { state: { amount } });
+    navigate('/payment-methods', { state: { amount, profileId } });
   };
 
   // Close modal if overlay is clicked

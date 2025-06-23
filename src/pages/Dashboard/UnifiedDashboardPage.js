@@ -8,7 +8,7 @@ import Button from '../../components/dashboard/button';
 import PaymentModal from '../payments-FAQ/PaymentModal';
 import Matchlist from './Matchlist';
 
-const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, setLikedProfiles, onNavigate }) => {
+const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, setLikedProfiles, directChatProfiles, setDirectChatProfiles, onNavigate }) => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -148,6 +148,13 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
         ? prev.filter((id) => id !== profileId)
         : [...prev, profileId]
     );
+  };
+
+  // Add a handler for payment selection
+  const handleSelectPayment = (amount, profileId) => {
+    // Store the payment intent in state if needed
+    // We'll handle adding to directChatProfiles after payment success in PaymentMethods
+    // Optionally, you could set a flag here
   };
 
   useEffect(() => {
@@ -373,7 +380,12 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
-      <PaymentModal show={showPaymentModal} onClose={handlePaymentClose} amount={199} />
+      <PaymentModal
+        show={showPaymentModal}
+        onClose={handlePaymentClose}
+        profileId={interestProfile ? interestProfile.id : null}
+        onSelectPayment={handleSelectPayment}
+      />
     </div>
   );
 };

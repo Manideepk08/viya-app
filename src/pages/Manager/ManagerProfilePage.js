@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const MediatorProfilePage = ({ onProfileComplete }) => {
+const ManagerProfilePage = ({ onProfileComplete }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -62,16 +62,16 @@ const MediatorProfilePage = ({ onProfileComplete }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Save to localStorage
-    localStorage.setItem('mediatorProfile', JSON.stringify(formData));
-    alert('Mediator profile updated successfully!');
+    localStorage.setItem('managerProfile', JSON.stringify(formData));
+    alert('Manager profile updated successfully!');
     if (onProfileComplete) onProfileComplete();
-    navigate('/mediator');
+    navigate('/manager');
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Mediator Profile</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Manager Profile</h1>
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -207,7 +207,7 @@ const MediatorProfilePage = ({ onProfileComplete }) => {
                 required
                 rows="4"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Tell us about your experience as a mediator..."
+                placeholder="Tell us about your experience as a manager..."
               />
             </div>
 
@@ -310,4 +310,4 @@ const MediatorProfilePage = ({ onProfileComplete }) => {
   );
 };
 
-export default MediatorProfilePage; 
+export default ManagerProfilePage; 

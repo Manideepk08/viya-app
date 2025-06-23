@@ -102,24 +102,27 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
             </div>
             <div className="text-2xl text-orange-500 font-semibold mb-4">{profile.age} years old</div>
             {/* Basic Personal Details */}
-            <Field label="Gender" value={profile.gender || 'N/A'} />
-            <Field label="Date of Birth" value={profile.dob || 'N/A'} />
-            <Field label="Marital Status" value={profile.maritalStatus || 'N/A'} />
-            <Field label="Height" value={profile.height || 'N/A'} />
-            <Field label="Weight" value={profile.weight || 'N/A'} />
-            <Field label="Blood Group" value={profile.bloodGroup || 'N/A'} />
-            <Field label="Residing City" value={profile.residingAddress && profile.residingAddress.city ? profile.residingAddress.city : 'N/A'} />
-            <Field label="Residing State" value={profile.residingAddress && profile.residingAddress.state ? profile.residingAddress.state : 'N/A'} />
+            <div className="bg-orange-50 rounded-xl p-5 mb-6 shadow-sm">
+              <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">Basic Personal Details</h4>
+              <Field label="Gender" value={profile.gender || 'N/A'} />
+              <Field label="Date of Birth" value={profile.dob || 'N/A'} />
+              <Field label="Marital Status" value={profile.maritalStatus || 'N/A'} />
+              <Field label="Height" value={profile.height || 'N/A'} />
+              <Field label="Weight" value={profile.weight || 'N/A'} />
+              <Field label="Blood Group" value={profile.bloodGroup || 'N/A'} />
+              <Field label="Residing City" value={profile.residingAddress && profile.residingAddress.city ? profile.residingAddress.city : 'N/A'} />
+              <Field label="Residing State" value={profile.residingAddress && profile.residingAddress.state ? profile.residingAddress.state : 'N/A'} />
+            </div>
             {/* About Me */}
-            <div className="mt-4 mb-2">
-              <h4 className="text-lg font-semibold text-gray-800 mb-1">About Me</h4>
+            <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+              <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">About Me</h4>
               <p className="text-gray-700">{profile.aboutMe || profile.bio || 'No description provided.'}</p>
             </div>
             {/* Education and Occupation */}
-            <div className="mt-4 mb-2">
-              <h4 className="text-lg font-semibold text-gray-800 mb-1">Education</h4>
+            <div className="bg-orange-50 rounded-xl p-5 mb-6 shadow-sm">
+              <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">Education and Occupation</h4>
               {Array.isArray(profile.education) ? (
-                <ul className="list-disc ml-6">
+                <ul className="list-disc ml-6 mb-2">
                   {profile.education.map((edu, idx) => (
                     <li key={idx}>{[edu.level, edu.stream, edu.institute].filter(Boolean).join(', ')}</li>
                   ))}
@@ -133,8 +136,8 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
               <Field label="Work Location" value={profile.workLocation ? `${profile.workLocation.city}, ${profile.workLocation.state}, ${profile.workLocation.country}` : (profile.city && profile.state ? `${profile.city}, ${profile.state}` : 'N/A')} />
             </div>
             {/* Family Details */}
-            <div className="mt-4 mb-2">
-              <h4 className="text-lg font-semibold text-gray-800 mb-1">Family Details</h4>
+            <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+              <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">Family Details</h4>
               <Field label="Family Type" value={profile.familyType || 'N/A'} />
               <Field label="Family Status" value={profile.familyStatus || 'N/A'} />
               <Field label="Father's Name" value={profile.fatherName || 'N/A'} />
@@ -145,8 +148,8 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
               <FieldList label="Siblings" items={profile.siblings || []} renderItem={(sib, i) => <span key={i}>{sib.relation} {sib.gender} - {sib.occupation}; </span>} />
             </div>
             {/* Cultural and Religion */}
-            <div className="mt-4 mb-2">
-              <h4 className="text-lg font-semibold text-gray-800 mb-1">Cultural and Religion</h4>
+            <div className="bg-orange-50 rounded-xl p-5 mb-6 shadow-sm">
+              <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">Cultural and Religion</h4>
               <Field label="Religion" value={profile.religion || 'N/A'} />
               <Field label="Community" value={profile.community || 'N/A'} />
               <Field label="Gothram" value={profile.gothram || 'N/A'} />
@@ -154,8 +157,8 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
               <Field label="Zodiac Sign" value={profile.zodiacSign || 'N/A'} />
             </div>
             {/* Lifestyle, Habits, Health */}
-            <div className="mt-4 mb-2">
-              <h4 className="text-lg font-semibold text-gray-800 mb-1">Lifestyle, Habits, and Health</h4>
+            <div className="bg-white rounded-xl p-5 mb-6 shadow-sm">
+              <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">Lifestyle, Habits, and Health</h4>
               <Field label="Dietary Habits" value={profile.dietaryHabits || 'N/A'} />
               <Field label="Smoking" value={profile.smoking || 'N/A'} />
               <Field label="Drinking" value={profile.drinking || 'N/A'} />

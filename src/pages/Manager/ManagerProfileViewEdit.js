@@ -14,13 +14,13 @@ const defaultProfile = {
   certifications: []
 };
 
-const MediatorProfileViewEdit = () => {
+const ManagerProfileViewEdit = () => {
   const [profile, setProfile] = useState(defaultProfile);
   const [editMode, setEditMode] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const stored = localStorage.getItem('mediatorProfile');
+    const stored = localStorage.getItem('managerProfile');
     if (stored) setProfile(JSON.parse(stored));
   }, []);
 
@@ -31,7 +31,7 @@ const MediatorProfileViewEdit = () => {
 
   const handleSave = (e) => {
     e.preventDefault();
-    localStorage.setItem('mediatorProfile', JSON.stringify(profile));
+    localStorage.setItem('managerProfile', JSON.stringify(profile));
     setEditMode(false);
     alert('Profile updated!');
   };
@@ -39,7 +39,7 @@ const MediatorProfileViewEdit = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Mediator Profile</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Manager Profile</h1>
         <div className="bg-white rounded-lg shadow-md p-6">
           {!editMode ? (
             <>
@@ -108,4 +108,4 @@ const MediatorProfileViewEdit = () => {
   );
 };
 
-export default MediatorProfileViewEdit; 
+export default ManagerProfileViewEdit; 

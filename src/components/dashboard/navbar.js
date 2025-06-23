@@ -1,11 +1,16 @@
 // src/components/Navbar.js
 import React, { useState } from 'react';
 
-const Navbar = ({ onNavigate, onLogout, isMediator = false }) => {
+const Navbar = ({ onNavigate, onLogout, isManager = false }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
 
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen(!isProfileMenuOpen);
+  };
+
+  const openHelpFAQ = (tab) => {
+    window.open(`/help-faq?tab=${tab}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -42,7 +47,7 @@ const Navbar = ({ onNavigate, onLogout, isMediator = false }) => {
                 >
                   My Interests
                 </button>
-                {!isMediator && (
+                {!isManager && (
                   <>
                     <button 
                       onClick={() => {
@@ -64,10 +69,10 @@ const Navbar = ({ onNavigate, onLogout, isMediator = false }) => {
                     </button>
                   </>
                 )}
-                {isMediator && (
+                {isManager && (
                   <button 
                     onClick={() => {
-                      onNavigate('/mediator');
+                      onNavigate('/manager');
                       setIsProfileMenuOpen(false);
                     }}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -87,6 +92,24 @@ const Navbar = ({ onNavigate, onLogout, isMediator = false }) => {
               </div>
             )}
           </div>
+          {/* Help Menu Dropdown */}
+          <div className="relative ml-4">
+            <button
+              className="bg-transparent border border-black text-black rounded-full w-8 h-8 flex items-center justify-center shadow hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-black"
+              onClick={() => setIsHelpMenuOpen((v) => !v)}
+              aria-label="Help"
+            >
+              <span className="text-xl font-bold">?</span>
+            </button>
+            {isHelpMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 py-2">
+                <button className="block w-full text-left px-4 py-2 hover:bg-orange-50 text-gray-800" onClick={() => openHelpFAQ('privacy')}>Privacy Policy</button>
+                <button className="block w-full text-left px-4 py-2 hover:bg-orange-50 text-gray-800" onClick={() => openHelpFAQ('terms')}>Terms of Service</button>
+                <button className="block w-full text-left px-4 py-2 hover:bg-orange-50 text-gray-800" onClick={() => openHelpFAQ('contact')}>Contact Us</button>
+                <button className="block w-full text-left px-4 py-2 hover:bg-orange-50 text-gray-800" onClick={() => openHelpFAQ('faq')}>FAQ</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
@@ -96,6 +119,9 @@ const Navbar = ({ onNavigate, onLogout, isMediator = false }) => {
           className="fixed inset-0 z-40" 
           onClick={() => setIsProfileMenuOpen(false)}
         />
+      )}
+      {isHelpMenuOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setIsHelpMenuOpen(false)} />
       )}
     </nav>
   );

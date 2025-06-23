@@ -1,14 +1,38 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const PaymentMethods = () => {
   const [selected, setSelected] = useState(null); // 'upi', 'credit', 'debit'
   const location = useLocation();
   const amount = location.state?.amount;
+  const profileId = location.state?.profileId;
+  const navigate = useNavigate();
 
   // Generate QR code URL with amount for UPI
   const qrAmount = amount ? String(amount) : '';
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=example@upi&pn=ViyaApp&am=${qrAmount}`;
+
+  const handlePaymentSuccess = () => {
+    // If direct chat payment, store profileId in localStorage
+    if (amount === 3000 && profileId) {
+      let directChatProfiles = JSON.parse(localStorage.getItem('directChatProfiles') || '[]');
+      if (!directChatProfiles.includes(profileId)) {
+        directChatProfiles.push(profileId);
+        localStorage.setItem('directChatProfiles', JSON.stringify(directChatProfiles));
+      }
+    }
+    // Get mediator details from localStorage
+    const mediatorProfile = JSON.parse(localStorage.getItem('mediatorProfile')) || {
+      name: 'Your Assigned Mediator',
+      email: 'mediator@viya.com',
+      phone: 'N/A',
+      location: 'N/A',
+      experience: 'N/A',
+      specialization: 'N/A',
+      about: '',
+    };
+    navigate('/mediator-assigned', { state: { mediator: mediatorProfile } });
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#fdeeee', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -29,7 +53,7 @@ const PaymentMethods = () => {
               <input type="text" placeholder="Enter your UPI ID" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
               <img src={qrUrl} alt="UPI QR" style={{ width: 140, height: 140, borderRadius: 8, border: '1px solid #eee' }} />
             </div>
-            <button style={{ padding: 14, borderRadius: 8, background: '#f97316', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }}>Pay Now</button>
+            <button style={{ padding: 14, borderRadius: 8, background: '#f97316', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }} onClick={handlePaymentSuccess}>Pay Now</button>
           </div>
         )}
         {/* Credit Card Form */}
@@ -42,7 +66,7 @@ const PaymentMethods = () => {
               <input type="text" placeholder="MM/YY" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
               <input type="text" placeholder="CVC" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
             </div>
-            <button style={{ padding: 14, borderRadius: 8, background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }}>Pay Now</button>
+            <button style={{ padding: 14, borderRadius: 8, background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }} onClick={handlePaymentSuccess}>Pay Now</button>
           </div>
         )}
         {/* Debit Card Form */}
@@ -55,7 +79,7 @@ const PaymentMethods = () => {
               <input type="text" placeholder="MM/YY" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
               <input type="text" placeholder="CVC" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
             </div>
-            <button style={{ padding: 14, borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }}>Pay Now</button>
+            <button style={{ padding: 14, borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }} onClick={handlePaymentSuccess}>Pay Now</button>
           </div>
         )}
       </div>

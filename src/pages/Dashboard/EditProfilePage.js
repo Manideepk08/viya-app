@@ -9,7 +9,7 @@ const EditProfilePage = () => {
   const [modalTitle, setModalTitle] = useState('');
   const [showConfirmButton, setShowConfirmButton] = useState(false);
 
-  // Sample profile data - in real app, this would come from backend/context
+  // Main profile data state
   const [profileData, setProfileData] = useState({
     // Basic Personal Details
     firstName: 'John',
@@ -82,6 +82,7 @@ const EditProfilePage = () => {
     medicalConditions: ''
   });
 
+  // Editable copy for form editing
   const [editableData, setEditableData] = useState({ ...profileData });
 
   const handleChange = (e) => {

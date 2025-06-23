@@ -10,8 +10,12 @@ const LoginPage = ({ onLoginSuccess }) => {
   const [showOtpSection, setShowOtpSection] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [showResend, setShowResend] = useState(false);
-  const [isMediator, setIsMediator] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const timerRef = useRef(null);
+  const [role, setRole] = useState('user');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const validateMobileEmail = (input) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -68,7 +72,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       setOtpError('');
       clearInterval(timerRef.current);
       alert('OTP verified successfully!');
-      onLoginSuccess(isMediator);
+      onLoginSuccess(role);
     } else {
       setOtpError('Invalid OTP. Please use 123456');
       setOtp('');
@@ -77,7 +81,17 @@ const LoginPage = ({ onLoginSuccess }) => {
 
   const handleGoogleLogin = () => {
     alert('Google login successful!');
-    onLoginSuccess(isMediator);
+    onLoginSuccess(role);
+  };
+
+  const handleRoleLogin = () => {
+    if (!username || !password) {
+      setLoginError('Please enter username and password');
+      return;
+    }
+    setLoginError('');
+    alert(`${role.charAt(0).toUpperCase() + role.slice(1)} login successful!`);
+    onLoginSuccess(role);
   };
 
   useEffect(() => {
@@ -109,130 +123,166 @@ const LoginPage = ({ onLoginSuccess }) => {
           <div className="w-full max-w-md">
             {/* Wedding Card Style Login Box */}
             <div className="relative bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-8 overflow-hidden">
+              {/* Role Selection */}
+              <div className="flex justify-center gap-4 mb-6">
+                <button
+                  className={`px-4 py-2 rounded-full font-bold text-sm transition-all ${role === 'user' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700'}`}
+                  onClick={() => setRole('user')}
+                >
+                  User
+                </button>
+                <button
+                  className={`px-4 py-2 rounded-full font-bold text-sm transition-all ${role === 'manager' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700'}`}
+                  onClick={() => setRole('manager')}
+                >
+                  Manager
+                </button>
+                <button
+                  className={`px-4 py-2 rounded-full font-bold text-sm transition-all ${role === 'admin' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700'}`}
+                  onClick={() => setRole('admin')}
+                >
+                  Admin
+                </button>
+              </div>
               {/* Content */}
               <div className="relative z-10">
-                <h2 className="text-[#1a0f10] tracking-light text-[28px] font-bold leading-tight text-center pb-6 pt-2">User Login / Registration</h2>
-                
-                {/* Mobile/Email Input with Validation */}
-                <div className="flex flex-wrap items-end gap-4 py-3">
-                  <label className="flex flex-col flex-1">
-                    <input
-                      type="text"
-                      placeholder="Mobile Number or Email"
-                      className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1a0f10] focus:outline-0 focus:ring-2 focus:ring-red-400 border-2 border-orange-200 bg-white focus:border-red-400 h-14 placeholder:text-[#93535b] p-[15px] text-base font-normal leading-normal"
-                      value={mobileEmail}
-                      onChange={(e) => setMobileEmail(e.target.value)}
-                      required
-                    />
-                    {mobileEmailError && (
-                      <span className="text-red-500 text-xs mt-1">{mobileEmailError}</span>
-                    )}
-                  </label>
-                </div>
-                
-                {/* Send OTP Button */}
-                <div className="flex py-3">
-                  <button
-                    onClick={handleSendOtp}
-                    className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-4 w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg transition-all duration-200"
-                  >
-                    <span className="truncate">Send OTP</span>
-                  </button>
-                </div>
-
-                {/* I'm a Mediator Toggle */}
-                <div className="flex items-center gap-4 bg-orange-50 rounded-lg px-4 min-h-14 justify-between border border-orange-200 mb-4">
-                  <p className="text-[#1a0f10] text-base font-medium leading-normal flex-1 truncate">I'm a Mediator</p>
-                  <div className="shrink-0">
-                    <label
-                      className={`relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none p-0.5 ${isMediator ? 'justify-end bg-gradient-to-r from-red-500 to-orange-500' : 'bg-orange-200'}`}
-                    >
-                      <div className="h-full w-[27px] rounded-full bg-white" style={{ boxShadow: 'rgba(0, 0, 0, 0.15) 0px 3px 8px, rgba(0, 0, 0, 0.06) 0px 3px 1px' }}></div>
-                      <input 
-                        type="checkbox" 
-                        className="invisible absolute" 
-                        checked={isMediator}
-                        onChange={() => setIsMediator(!isMediator)}
-                      />
-                    </label>
-                  </div>
-                </div>
-                
-                {/* OTP Input Field (Initially Hidden) */}
-                {showOtpSection && (
-                  <div className="slide-up">
+                {role === 'user' && (
+                  <>
+                    <h2 className="text-[#1a0f10] tracking-light text-[28px] font-bold leading-tight text-center pb-6 pt-2">User Login / Registration</h2>
+                    {/* Mobile/Email Input with Validation */}
                     <div className="flex flex-wrap items-end gap-4 py-3">
                       <label className="flex flex-col flex-1">
                         <input
                           type="text"
-                          placeholder="Enter 6-digit OTP"
-                          maxLength={6}
-                          pattern="[0-9]{6}"
-                          className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1a0f10] focus:outline-0 focus:ring-2 focus:ring-red-400 border-2 border-orange-200 bg-white focus:border-red-400 h-14 placeholder:text-[#93535b] p-[15px] text-base font-normal leading-normal text-center text-lg tracking-widest"
-                          value={otp}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/[^0-9]/g, '');
-                            setOtp(value);
-                            if (value.length === 6) {
-                              setTimeout(() => {
-                                handleVerifyOtp();
-                              }, 500);
-                            }
-                          }}
+                          placeholder="Mobile Number or Email"
+                          className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1a0f10] focus:outline-0 focus:ring-2 focus:ring-red-400 border-2 border-orange-200 bg-white focus:border-red-400 h-14 placeholder:text-[#93535b] p-[15px] text-base font-normal leading-normal"
+                          value={mobileEmail}
+                          onChange={(e) => setMobileEmail(e.target.value)}
+                          required
                         />
-                        {otpError && (
-                          <span className="text-red-500 text-xs mt-1">{otpError}</span>
+                        {mobileEmailError && (
+                          <span className="text-red-500 text-xs mt-1">{mobileEmailError}</span>
                         )}
                       </label>
                     </div>
-                    
-                    {/* OTP Timer and Resend */}
-                    <div className="flex justify-between items-center py-2">
-                      {!showResend ? (
-                        <span className="text-sm text-gray-600">Resend OTP in <span>{countdown}</span>s</span>
-                      ) : (
-                        <button 
-                          onClick={handleResendOtp}
-                          className="text-red-600 hover:text-red-800 font-medium text-sm"
-                        >
-                          Resend OTP
-                        </button>
-                      )}
-                    </div>
-                    
-                    {/* Verify OTP Button */}
+                    {/* Send OTP Button */}
                     <div className="flex py-3">
                       <button
-                        onClick={handleVerifyOtp}
-                        className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-4 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg transition-all duration-200"
+                        onClick={handleSendOtp}
+                        className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-4 w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg transition-all duration-200"
                       >
-                        <span className="truncate">Verify OTP</span>
+                        <span className="truncate">Send OTP</span>
                       </button>
                     </div>
-                  </div>
+                    {/* OTP Input Field (Initially Hidden) */}
+                    {showOtpSection && (
+                      <div className="slide-up">
+                        <div className="flex flex-wrap items-end gap-4 py-3">
+                          <label className="flex flex-col flex-1">
+                            <input
+                              type="text"
+                              placeholder="Enter 6-digit OTP"
+                              maxLength={6}
+                              pattern="[0-9]{6}"
+                              className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1a0f10] focus:outline-0 focus:ring-2 focus:ring-red-400 border-2 border-orange-200 bg-white focus:border-red-400 h-14 placeholder:text-[#93535b] p-[15px] text-base font-normal leading-normal text-center text-lg tracking-widest"
+                              value={otp}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                setOtp(value);
+                                if (value.length === 6) {
+                                  setTimeout(() => {
+                                    handleVerifyOtp();
+                                  }, 500);
+                                }
+                              }}
+                            />
+                            {otpError && (
+                              <span className="text-red-500 text-xs mt-1">{otpError}</span>
+                            )}
+                          </label>
+                        </div>
+                        {/* OTP Timer and Resend */}
+                        <div className="flex justify-between items-center py-2">
+                          {!showResend ? (
+                            <span className="text-sm text-gray-600">Resend OTP in <span>{countdown}</span>s</span>
+                          ) : (
+                            <button 
+                              onClick={handleResendOtp}
+                              className="text-red-600 hover:text-red-800 font-medium text-sm"
+                            >
+                              Resend OTP
+                            </button>
+                          )}
+                        </div>
+                        {/* Verify OTP Button */}
+                        <div className="flex py-3">
+                          <button
+                            onClick={handleVerifyOtp}
+                            className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-4 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg transition-all duration-200"
+                          >
+                            <span className="truncate">Verify OTP</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Social Login */}
+                    <div className="py-4">
+                      <div className="flex items-center justify-center mb-4">
+                        <div className="border-t border-gray-300 flex-grow mr-3"></div>
+                        <span className="text-gray-500 text-sm">OR</span>
+                        <div className="border-t border-gray-300 flex-grow ml-3"></div>
+                      </div>
+                      <button
+                        onClick={handleGoogleLogin}
+                        className="flex items-center justify-center w-full h-12 px-4 border-2 border-gray-300 rounded-xl hover:border-gray-400 bg-white text-gray-700 font-medium transition-all duration-200"
+                      >
+                        <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Continue with Google
+                      </button>
+                    </div>
+                  </>
                 )}
-                
-                {/* Social Login */}
-                <div className="py-4">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="border-t border-gray-300 flex-grow mr-3"></div>
-                    <span className="text-gray-500 text-sm">OR</span>
-                    <div className="border-t border-gray-300 flex-grow ml-3"></div>
-                  </div>
-                  <button
-                    onClick={handleGoogleLogin}
-                    className="flex items-center justify-center w-full h-12 px-4 border-2 border-gray-300 rounded-xl hover:border-gray-400 bg-white text-gray-700 font-medium transition-all duration-200"
-                  >
-                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Continue with Google
-                  </button>
-                </div>
-                
+                {(role === 'manager' || role === 'admin') && (
+                  <>
+                    <h2 className="text-[#1a0f10] tracking-light text-[28px] font-bold leading-tight text-center pb-6 pt-2">{role.charAt(0).toUpperCase() + role.slice(1)} Login</h2>
+                    <div className="flex flex-col gap-4 py-3">
+                      <label className="flex flex-col">
+                        <input
+                          type="text"
+                          placeholder="Username"
+                          className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1a0f10] focus:outline-0 focus:ring-2 focus:ring-red-400 border-2 border-orange-200 bg-white focus:border-red-400 h-14 placeholder:text-[#93535b] p-[15px] text-base font-normal leading-normal"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          required
+                        />
+                      </label>
+                      <label className="flex flex-col">
+                        <input
+                          type="password"
+                          placeholder="Password"
+                          className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1a0f10] focus:outline-0 focus:ring-2 focus:ring-red-400 border-2 border-orange-200 bg-white focus:border-red-400 h-14 placeholder:text-[#93535b] p-[15px] text-base font-normal leading-normal"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                      </label>
+                      {loginError && <span className="text-red-500 text-xs mt-1">{loginError}</span>}
+                    </div>
+                    <div className="flex py-3">
+                      <button
+                        onClick={handleRoleLogin}
+                        className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-4 w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white text-sm font-bold leading-normal tracking-[0.015em] shadow-lg transition-all duration-200"
+                      >
+                        <span className="truncate">Login</span>
+                      </button>
+                    </div>
+                  </>
+                )}
                 {/* Conditional Links */}
                 <p className="text-center text-sm text-gray-600 mt-4">
                   By continuing, you agree to our <a href="/terms" className="text-red-600 hover:underline">Terms of Service</a> and <a href="/privacy" className="text-red-600 hover:underline">Privacy Policy</a>
@@ -246,7 +296,7 @@ const LoginPage = ({ onLoginSuccess }) => {
   );
 };
 
-const ProfilePage = ({ onProfileComplete, isMediator }) => {
+const ProfilePage = ({ onProfileComplete, isManager }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     gender: '',
@@ -276,7 +326,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
     lookingFor: '',
     profilePhotos: [],
     profileVideos: [],
-    // Mediator-specific fields
+    // Manager-specific fields
     email: '',
     phone: '',
     experience: '',
@@ -308,7 +358,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
-    const maxPhotos = isMediator ? 3 : 5;
+    const maxPhotos = isManager ? 3 : 5;
     
     if (photoPreviews.length + files.length > maxPhotos) {
       alert(`You can upload a maximum of ${maxPhotos} photos`);
@@ -381,14 +431,14 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (isMediator) {
-      // Mediator profile validation
+    if (isManager) {
+      // Manager profile validation
       if (!formData.fullName || !formData.email || !formData.phone || !formData.experience) {
-        alert('Please fill in all required fields for mediator profile.');
+        alert('Please fill in all required fields for manager profile.');
         return false;
       }
       
-      alert('Mediator profile created successfully! Redirecting to mediator dashboard...');
+      alert('Manager profile created successfully! Redirecting to manager dashboard...');
     } else {
       // Regular user profile validation
       // Age validation
@@ -447,7 +497,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
   return (
     <div className="layout-container flex h-full grow flex-col relative bg-amber-50" style={{ fontFamily: 'Manrope, Noto Sans, sans-serif' }}>
       {/* Thoranam image row at the top - only for regular users */}
-      {!isMediator && (
+      {!isManager && (
         <div className="w-full flex flex-row bg-amber-50" style={{ height: '80px' }}>
           <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
           <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
@@ -469,7 +519,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
         <div className="px-2 sm:px-4 md:px-6 lg:px-10 flex flex-1 justify-center py-1 relative z-10">
           <div className="layout-content-container flex flex-col max-w-[1200px] flex-1 bg-white rounded-lg shadow-lg p-6 sm:p-8 relative">
             {/* Little Fingers No Background Image covering entire screen - only for regular users */}
-            {!isMediator && (
+            {!isManager && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <img src="/littlefingers_nobg.png" alt="Little Fingers No Background" className="w-full h-full object-cover" />
               </div>
@@ -477,14 +527,14 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
             
             <div className="flex flex-wrap justify-between gap-2 p-2 relative z-20">
               <p className="text-gray-800 tracking-tight text-[20px] sm:text-[24px] font-bold leading-tight min-w-72">
-                {isMediator ? 'Create Mediator Profile' : 'Create Your Profile'}
+                {isManager ? 'Create Manager Profile' : 'Create Your Profile'}
               </p>
             </div>
               
-            <form id="profileForm" onSubmit={handleSubmit} className="relative z-20" key={`form-${isMediator}`}>
+            <form id="profileForm" onSubmit={handleSubmit} className="relative z-20" key={`form-${isManager}`}>
               {/* Personal Information */}
               <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">
-                {isMediator ? 'Basic Information' : 'Personal Information'}
+                {isManager ? 'Basic Information' : 'Personal Information'}
               </h3>
               <div className="flex flex-wrap gap-3 px-3 py-1">
                 <label className="flex flex-col min-w-36 flex-1">
@@ -500,7 +550,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
                   />
                 </label>
                 
-                {!isMediator && (
+                {!isManager && (
                   <>
                     <label className="flex flex-col min-w-36 flex-1">
                       <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Gender <span className="text-red-600 font-bold text-base">*</span></p>
@@ -549,7 +599,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
                   </>
                 )}
 
-                {isMediator === true && (
+                {isManager === true && (
                   <>
                     <label className="flex flex-col min-w-36 flex-1">
                       <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Email <span className="text-red-600 font-bold text-base">*</span></p>
@@ -595,7 +645,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
                 )}
               </div>
 
-              {!isMediator && (
+              {!isManager && (
                 <>
                   {/* Community Details */}
                   <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Community Details</h3>
@@ -678,10 +728,10 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
 
               {/* Professional Information */}
               <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">
-                {isMediator ? 'Professional Information' : 'Professional Information'}
+                {isManager ? 'Professional Information' : 'Professional Information'}
               </h3>
               <div className="flex flex-wrap gap-3 px-3 py-1">
-                {!isMediator ? (
+                {!isManager ? (
                   <>
                     <label className="flex flex-col min-w-36 flex-1">
                       <p className="text-gray-700 text-xs font-medium leading-normal pb-1">Education <span className="text-red-600 font-bold text-base">*</span></p>
@@ -800,7 +850,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
               </div>
 
               {/* Family Information */}
-              {!isMediator && (
+              {!isManager && (
                 <>
                   <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Family Information</h3>
                   <div className="flex flex-wrap gap-3 px-3 py-1">
@@ -860,7 +910,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
               )}
 
               {/* Marriage Preferences */}
-              {!isMediator && (
+              {!isManager && (
                 <>
                   <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">Marriage Preferences</h3>
                   <div className="flex flex-wrap gap-3 px-3 py-1">
@@ -946,19 +996,19 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
 
               {/* Profile Media */}
               <h3 className="text-gray-700 text-sm font-bold leading-tight tracking-[-0.015em] px-3 pb-1 pt-2">
-                {isMediator ? 'Profile Media' : 'Profile Media'}
+                {isManager ? 'Profile Media' : 'Profile Media'}
               </h3>
               
               {/* Photos Section */}
               <div className="px-3 py-1">
                 <p className="text-gray-700 text-xs font-medium leading-normal pb-2">
                   Profile Photos 
-                  {!isMediator && <span className="text-red-600 font-bold text-base">*</span>}
+                  {!isManager && <span className="text-red-600 font-bold text-base">*</span>}
                   <span className="text-gray-500 text-xs">
-                    {isMediator ? '(Upload up to 3 photos)' : '(Upload up to 5 photos)'}
+                    {isManager ? '(Upload up to 3 photos)' : '(Upload up to 5 photos)'}
                   </span>
                 </p>
-                <div className={`grid gap-2 max-w-2xl ${isMediator ? 'grid-cols-3' : 'grid-cols-4 sm:grid-cols-5'}`}>
+                <div className={`grid gap-2 max-w-2xl ${isManager ? 'grid-cols-3' : 'grid-cols-4 sm:grid-cols-5'}`}>
                   {/* Photo previews */}
                   {photoPreviews.map((preview, index) => (
                     <div key={index} className="relative aspect-square w-24 sm:w-28 bg-gray-100 rounded-lg overflow-hidden group">
@@ -976,7 +1026,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
                   ))}
                   
                   {/* Add Photo Button */}
-                  {photoPreviews.length < (isMediator ? 3 : 5) && (
+                  {photoPreviews.length < (isManager ? 3 : 5) && (
                     <div className="aspect-square w-24 sm:w-28 bg-white rounded-lg border-2 border-dashed border-gray-300 p-2 flex items-center justify-center hover:border-orange-300 transition-colors cursor-pointer">
                       <input
                         type="file"
@@ -986,7 +1036,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
                         className="hidden"
                         multiple
                         onChange={handlePhotoUpload}
-                        required={!isMediator && photoPreviews.length === 0}
+                        required={!isManager && photoPreviews.length === 0}
                       />
                       <label htmlFor="profilePhotos" className="cursor-pointer text-center w-full h-full flex flex-col items-center justify-center">
                         <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -999,7 +1049,7 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
                 </div>
               </div>
 
-              {!isMediator && (
+              {!isManager && (
                 <>
                   {/* Videos Section */}
                   <div className="px-3 py-1 mt-2">
@@ -1051,21 +1101,21 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
               <div className="flex flex-col sm:flex-row max-w-[1200px] flex-wrap items-end gap-3 px-3 py-1">
                 <label className="flex flex-col min-w-36 flex-1">
                   <p className="text-gray-700 text-xs font-medium leading-normal pb-1">
-                    {isMediator ? 'About Me' : 'About Me'} 
-                    {!isMediator && <span className="text-red-600 font-bold text-base">*</span>}
+                    {isManager ? 'About Me' : 'About Me'} 
+                    {!isManager && <span className="text-red-600 font-bold text-base">*</span>}
                   </p>
                   <textarea
                     id="aboutMe"
                     name="aboutMe"
-                    placeholder={isMediator ? "Tell us about your experience as a mediator..." : "Tell us about yourself (minimum 30 words)"}
-                    required={!isMediator}
+                    placeholder={isManager ? "Tell us about your experience as a manager..." : "Tell us about yourself (minimum 30 words)"}
+                    required={!isManager}
                     value={formData.aboutMe}
                     onChange={handleInputChange}
                     className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-300 border border-gray-200 bg-white focus:border-orange-400 h-14 placeholder:text-gray-400 p-[12px] text-sm font-normal leading-normal"
                   ></textarea>
                 </label>
               </div>
-              {!isMediator && (
+              {!isManager && (
                 <div className="flex flex-col sm:flex-row max-w-[1200px] flex-wrap items-end gap-3 px-3 py-1">
                   <label className="flex flex-col min-w-36 flex-1">
                     <p className="text-gray-700 text-xs font-medium leading-normal pb-1">What I'm Looking For <span className="text-red-600 font-bold text-base">*</span></p>
@@ -1106,12 +1156,12 @@ const ProfilePage = ({ onProfileComplete, isMediator }) => {
   );
 };
 
-const App = ({ onProfileComplete, isMediator: externalIsMediator }) => {
+const App = ({ onProfileComplete, isManager: externalIsManager }) => {
   const [showProfile, setShowProfile] = useState(false);
-  const [isMediator, setIsMediator] = useState(externalIsMediator || false);
-  
-  const handleLoginSuccess = (mediatorStatus) => {
-    setIsMediator(mediatorStatus);
+  const [role, setRole] = useState(null); // 'user', 'manager', 'admin'
+
+  const handleLoginSuccess = (loginRole) => {
+    setRole(loginRole);
     setShowProfile(true);
   };
 
@@ -1120,9 +1170,13 @@ const App = ({ onProfileComplete, isMediator: externalIsMediator }) => {
       {!showProfile ? (
         <LoginPage onLoginSuccess={handleLoginSuccess} />
       ) : (
-        isMediator
-          ? <ProfilePage onProfileComplete={() => onProfileComplete(true)} isMediator={true} />
-          : <ProfilePageUser onProfileComplete={() => onProfileComplete(false)} />
+        role === 'manager' ? (
+          <ProfilePage onProfileComplete={() => onProfileComplete(true)} isManager={true} />
+        ) : role === 'user' ? (
+          <ProfilePageUser onProfileComplete={() => onProfileComplete(false)} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-white text-2xl font-bold">Admin Dashboard (Coming Soon)</div>
+        )
       )}
     </div>
   );
