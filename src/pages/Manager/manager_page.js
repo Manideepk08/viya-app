@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ManagerNavbar from '../../components/mediator_navbar';
+import { useNavigate } from 'react-router-dom';
 
 // Move matchRequests here, outside the component
 const matchRequests = [
@@ -138,6 +139,8 @@ const ManagerDashboard = () => {
     { id: 4, profile: "Anjali Gupta", amount: 199, status: "Pending", date: "2025-06-09" },
     { id: 5, profile: "Vikram Rao", amount: 199, status: "Paid", date: "2025-06-08" },
   ]);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     setMatchRequestStatuses(matchRequests.map(r => r.status || 'Pending'));
@@ -341,7 +344,7 @@ const ManagerDashboard = () => {
 
   // Navigation handlers
   const handleProfile = () => {
-    window.location.href = '/manager-profile';
+    navigate('/manager-profile-view');
   };
   const handleLogout = () => {
     window.location.href = '/';

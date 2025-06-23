@@ -179,7 +179,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
             />
           </button>
           <div className="flex items-center p-4">
-            <div className="relative mr-4">
+            <div className="relative mr-4 cursor-pointer" onClick={() => handleViewMore(profile)}>
               <img 
                 className="w-20 h-20 rounded-full object-cover border-4 border-indigo-200" 
                 src={profile.photos[0]} 
@@ -191,7 +191,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
                 </div>
               )}
             </div>
-            <div className="flex-grow">
+            <div className="flex-grow cursor-pointer" onClick={() => handleViewMore(profile)}>
               <h3 className="text-lg font-bold text-gray-900">{profile.name}</h3>
               <p className="text-md text-orange-500 font-semibold">{profile.age} years old</p>
               
@@ -256,7 +256,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
             fill={isLiked ? 'currentColor' : 'none'}
           />
         </button>
-        <div className="relative">
+        <div className="relative cursor-pointer" onClick={() => handleViewMore(profile)}>
           <img className="w-full h-60 object-cover" src={profile.photos[0]} alt={profile.name} />
           {profile.verified && (
             <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-semibold">
@@ -264,7 +264,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
             </div>
           )}
         </div>
-        <div className="p-4">
+        <div className="p-4 cursor-pointer" onClick={() => handleViewMore(profile)}>
           <h3 className="text-xl font-bold text-gray-900">{profile.name}</h3>
           <p className="text-md text-orange-500 font-semibold">{profile.age} years old</p>
           

@@ -1,9 +1,33 @@
 // src/components/Navbar.js
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const Navbar = ({ onNavigate, onLogout, isManager = false }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef();
+  // Mock notifications
+  const [notifications, setNotifications] = useState([
+    { id: 1, message: 'Your interest was accepted!', read: false },
+    { id: 2, message: 'Mediator assigned to your match.', read: false },
+    { id: 3, message: 'Profile update approved.', read: true },
+  ]);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setIsNotifOpen(false);
+      }
+    }
+    if (isNotifOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isNotifOpen]);
 
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen(!isProfileMenuOpen);
@@ -21,6 +45,32 @@ const Navbar = ({ onNavigate, onLogout, isManager = false }) => {
           <span className="text-2xl font-bold tracking-tight">Viya Matrimony</span>
         </div>
         <div className="flex items-center space-x-4 mt-2 md:mt-0">
+          {/* Notification Bell */}
+          <div className="relative" ref={notifRef}>
+            <button className="focus:outline-none relative" onClick={() => setIsNotifOpen((v) => !v)}>
+              <svg className="w-7 h-7 text-white hover:text-yellow-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {/* Notification count badge */}
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold border-2 border-white">{unreadCount}</span>
+              )}
+            </button>
+            {/* Notification Dropdown */}
+            {isNotifOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto">
+                <div className="px-4 py-2 font-semibold text-gray-800 border-b">Notifications</div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-6 text-gray-500 text-center">No notifications</div>
+                ) : (
+                  notifications.map((notif) => (
+                    <div key={notif.id} className={`px-4 py-3 text-sm border-b last:border-b-0 ${notif.read ? 'bg-gray-50 text-gray-500' : 'bg-orange-50 text-gray-900 font-semibold'}`}>{notif.message}</div>
+                  ))
+                )}
+                <button className="block w-full text-center text-orange-600 py-2 hover:bg-orange-50 font-semibold" onClick={() => setNotifications([])}>Clear All</button>
+              </div>
+            )}
+          </div>
           {/* Profile Menu Dropdown */}
           <div className="relative">
             <button 

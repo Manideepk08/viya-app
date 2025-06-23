@@ -44,15 +44,15 @@ const ManagerProfileViewEdit = () => {
           {!editMode ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div><b>Name:</b> {profile.name}</div>
-                <div><b>Email:</b> {profile.email}</div>
-                <div><b>Phone:</b> {profile.phone}</div>
-                <div><b>Location:</b> {profile.location}</div>
-                <div><b>Experience:</b> {profile.experience}</div>
-                <div><b>Specialization:</b> {profile.specialization}</div>
-                <div><b>Commission Rate:</b> {profile.commissionRate}</div>
+                <div><b>Name:</b> {profile.name || '-'}</div>
+                <div><b>Email:</b> {profile.email || '-'}</div>
+                <div><b>Phone:</b> {profile.phone || '-'}</div>
+                <div><b>Location:</b> {profile.location || '-'}</div>
+                <div><b>Experience:</b> {profile.experience || '-'}</div>
+                <div><b>Specialization:</b> {profile.specialization || '-'}</div>
+                <div><b>Commission Rate:</b> {profile.commissionRate || '-'}</div>
               </div>
-              <div className="mb-6"><b>About:</b> {profile.about}</div>
+              <div className="mb-6"><b>About:</b> {profile.about || '-'}</div>
               <button
                 className="bg-orange-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-600"
                 onClick={() => setEditMode(true)}

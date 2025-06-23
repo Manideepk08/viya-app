@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import '../../App.css';
 import { mockProfiles } from '../../data/mockdata';
+import ProfileDetailsModal from '../../components/dashboard/ProfileDetailsModal';
 
 const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles = [], onNavigate = (path) => {} }) => {
   const [activeTab, setActiveTab] = useState('sent');
@@ -15,6 +16,8 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
     // Restore minimized state from localStorage
     return localStorage.getItem('isChatMinimized') === 'true';
   });
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Defensive: always treat IDs as numbers for comparison
   const sentProfiles = mockProfiles.filter(p => sentInterests.map(Number).includes(Number(p.id)));
@@ -61,6 +64,16 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
     }
   };
 
+  const handleProfileClick = (profile) => {
+    setSelectedProfile(profile);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProfile(null);
+  };
+
   const renderProfiles = (profiles, emptyMsg, showChat = false) => {
     if (mockProfiles.length === 0) {
       return <div className="text-gray-500 text-center py-8">No profiles available.</div>;
@@ -70,8 +83,13 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
         <ul className="divide-y">
           {profiles.map(profile => (
             <li key={profile.id} className="py-4 flex items-center space-x-4">
-              <img src={profile.photos[0]} alt={profile.name} className="w-16 h-16 rounded-full object-cover border-2 border-orange-200" />
-              <div className="flex-1">
+              <img
+                src={profile.photos[0]}
+                alt={profile.name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-orange-200 cursor-pointer"
+                onClick={() => handleProfileClick(profile)}
+              />
+              <div className="flex-1 cursor-pointer" onClick={() => handleProfileClick(profile)}>
                 <div className="font-bold text-lg text-gray-800">{profile.name}</div>
                 <div className="text-gray-500">{profile.age} yrs, {profile.city}, {profile.state}</div>
               </div>
@@ -176,6 +194,18 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
           >
             <span role="img" aria-label="Chat">💬</span>
           </button>
+        )}
+        {/* Profile Details Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+            <div className="relative w-full max-w-2xl mx-auto">
+              <ProfileDetailsModal
+                profile={selectedProfile}
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+              />
+            </div>
+          </div>
         )}
       </main>
     </div>

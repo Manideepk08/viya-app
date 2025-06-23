@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 const PaymentMethods = () => {
   const [selected, setSelected] = useState(null); // 'upi', 'credit', 'debit'
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const location = useLocation();
   const amount = location.state?.amount;
   const profileId = location.state?.profileId;
@@ -21,24 +22,14 @@ const PaymentMethods = () => {
         localStorage.setItem('directChatProfiles', JSON.stringify(directChatProfiles));
       }
     }
-    // Get mediator details from localStorage
-    const mediatorProfile = JSON.parse(localStorage.getItem('mediatorProfile')) || {
-      name: 'Your Assigned Mediator',
-      email: 'mediator@viya.com',
-      phone: 'N/A',
-      location: 'N/A',
-      experience: 'N/A',
-      specialization: 'N/A',
-      about: '',
-    };
-    navigate('/mediator-assigned', { state: { mediator: mediatorProfile } });
+    setPaymentSuccess(true);
   };
 
   return (
     <div style={{ minHeight: '100vh', background: '#fdeeee', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 16px rgba(0,0,0,0.07)', padding: 32, minWidth: 340, maxWidth: 500, width: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Payment method selection row */}
-        {!selected && (
+        {!selected && !paymentSuccess && (
           <div style={{ display: 'flex', flexDirection: 'row', gap: 18, justifyContent: 'center', marginBottom: 8 }}>
             <button style={{ flex: 1, padding: 18, borderRadius: 10, fontSize: 18, fontWeight: 600, background: '#f97316', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setSelected('upi')}>UPI</button>
             <button style={{ flex: 1, padding: 18, borderRadius: 10, fontSize: 18, fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }} onClick={() => setSelected('credit')}>Credit Card</button>
@@ -46,7 +37,7 @@ const PaymentMethods = () => {
           </div>
         )}
         {/* UPI Form */}
-        {selected === 'upi' && (
+        {selected === 'upi' && !paymentSuccess && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#f97316', marginBottom: 8 }}>Pay Amount: ₹{amount || '...'}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
@@ -57,7 +48,7 @@ const PaymentMethods = () => {
           </div>
         )}
         {/* Credit Card Form */}
-        {selected === 'credit' && (
+        {selected === 'credit' && !paymentSuccess && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#2563eb', marginBottom: 8 }}>Pay Amount: ₹{amount || '...'}</div>
             <input type="text" placeholder="Card Holder Name" style={{ padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
@@ -70,7 +61,7 @@ const PaymentMethods = () => {
           </div>
         )}
         {/* Debit Card Form */}
-        {selected === 'debit' && (
+        {selected === 'debit' && !paymentSuccess && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#22c55e', marginBottom: 8 }}>Pay Amount: ₹{amount || '...'}</div>
             <input type="text" placeholder="Card Holder Name" style={{ padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
@@ -80,6 +71,12 @@ const PaymentMethods = () => {
               <input type="text" placeholder="CVC" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #eee', fontSize: 16 }} />
             </div>
             <button style={{ padding: 14, borderRadius: 8, background: '#22c55e', color: '#fff', fontWeight: 700, fontSize: 16, border: 'none', marginTop: 12 }} onClick={handlePaymentSuccess}>Pay Now</button>
+          </div>
+        )}
+        {/* After payment success */}
+        {paymentSuccess && (
+          <div className="bg-green-100 text-green-800 p-4 rounded-lg mt-6 text-center font-semibold">
+            Payment is successful. Your mediator will be assigned shortly.
           </div>
         )}
       </div>

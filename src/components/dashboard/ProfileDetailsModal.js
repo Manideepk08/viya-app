@@ -94,6 +94,16 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
           </div>
           {/* Profile Details (2/3) */}
           <div className="flex-1 flex flex-col justify-start p-10 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-base font-semibold text-blue-700">
+                  Mediator: {profile.mediatorName ? profile.mediatorName : 'Not assigned'}
+                </div>
+                <div className="text-sm text-gray-700 mt-1">
+                  Phone: {profile.mediatorPhone ? profile.mediatorPhone : 'Not available'}
+                </div>
+              </div>
+            </div>
             <div className="flex items-center justify-between">
               <h2 className="text-4xl font-bold text-gray-900 mb-2">{profile.firstName || profile.name} {profile.lastName || ''}</h2>
               {profile.verified && (
