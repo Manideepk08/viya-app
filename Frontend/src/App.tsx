@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './App.css';
 import IntroProfileApp from './pages/intro+profile/intro_profile';
 import Navbar from './components/dashboard/navbar';
@@ -24,6 +25,17 @@ function App() {
   const [directChatProfiles, setDirectChatProfiles] = useState([]);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Check for token in local storage on app load
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setIsLoggedIn(true);
+      // You might want to add a call to a '/users/me' endpoint here
+      // to verify the token is still valid and get user data.
+    }
+  }, []);
+
   // On mount, load directChatProfiles from localStorage
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem('directChatProfiles') || '[]');
@@ -45,6 +57,9 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Clear token and auth headers
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
     setIsLoggedIn(false);
     setIsManager(false);
     navigate('/');

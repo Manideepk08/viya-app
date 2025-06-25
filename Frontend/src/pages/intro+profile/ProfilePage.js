@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 
 const steps = [
   'Basic Personal Details',
@@ -133,15 +134,46 @@ const ProfilePage = ({ onProfileComplete }) => {
   };
 
   // Submit handler
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted at step:', step);
-    // Only submit if we're on the last step (case 5)
-    if (step === 5) {
-      console.log('Final step, calling onProfileComplete');
-      if (onProfileComplete) {
-        onProfileComplete();
-      }
+    // Only submit if we're on the last step
+    if (step === steps.length - 1) {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Authentication error. Please log in again.');
+                return;
+            }
+
+            // The backend expects `fullName`, not firstName and lastName.
+            const profileDataToSend = {
+                ...formData,
+                fullName: `${formData.firstName} ${formData.lastName}`,
+            };
+            
+            // Remove the now-redundant fields
+            delete profileDataToSend.firstName;
+            delete profileDataToSend.lastName;
+
+
+            const config = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+
+            await axios.put('http://localhost:5000/users/me', profileDataToSend, config);
+
+            alert('Profile saved successfully!');
+            if (onProfileComplete) {
+                onProfileComplete();
+            }
+
+        } catch (err) {
+            console.error(err.response ? err.response.data : err.message);
+            alert('Error saving profile. Please check the console for details and try again.');
+        }
     }
   };
 
