@@ -15,6 +15,10 @@ import Matchlist from './pages/Dashboard/Matchlist';
 import ManagerProfileViewEdit from './pages/Manager/ManagerProfileViewEdit';
 import MediatorAssigned from './pages/payments-FAQ/mediator_assigned';
 import WelcomePage from './pages/welcomepages-main/WelcomePage';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserProfilesPage from './pages/admin/UserProfilesPage';
+import MediatorProfilesPage from './pages/admin/MediatorProfilesPage';
+import RevenueProfilesPage from './pages/admin/RevenueProfilesPage';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -71,6 +75,11 @@ function App() {
           </>
         } />
         <Route path="/manager-assigned" element={<MediatorAssigned />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard onLogout={() => { setIsLoggedIn(false); navigate('/'); }} />}>
+          <Route path="users" element={<UserProfilesPage />} />
+          <Route path="mediators" element={<MediatorProfilesPage />} />
+          <Route path="revenue" element={<RevenueProfilesPage />} />
+        </Route>
         {isLoggedIn && (
           <>
             <Route path="/dashboard" element={
