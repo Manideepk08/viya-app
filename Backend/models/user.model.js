@@ -26,36 +26,85 @@ const userSchema = new Schema({
     type: Boolean,
     default: false,
   },
-  // Basic Info
+  // Basic Personal Details
   fullName: { type: String },
+  gender: { type: String, enum: ['Male', 'Female', 'Other', 'male', 'female', 'other'] },
   dob: { type: Date },
-  gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+  maritalStatus: { type: String },
+  height: { type: String },
+  weight: { type: String },
+  bloodGroup: { type: String },
+  aboutMe: { type: String },
+  photos: [{ type: String }],
+  video: { type: String },
   
-  // Contact & Location
-  city: { type: String },
-  state: { type: String },
-  country: { type: String },
+  // Contact Information
+  phone: { type: String },
+  aadhar: { type: String },
+  residingAddress: {
+    address: { type: String },
+    village: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String },
+  },
+  nativeAddress: {
+    address: { type: String },
+    village: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String },
+  },
 
-  // Professional & Educational
-  occupation: { type: String },
+  // Education and Occupation
   education: [{
     level: { type: String },
     stream: { type: String },
     institute: { type: String },
   }],
+  employeeRole: { type: String },
+  company: { type: String },
+  annualSalary: { type: String },
+  workLocation: {
+    city: { type: String },
+    state: { type: String },
+    country: { type: String },
+  },
   
-  // Physical Attributes
-  height: { type: String }, // Storing as string for flexibility e.g., "5'10\""
+  // Family Details
+  familyType: { type: String },
+  familyStatus: { type: String },
+  fatherName: { type: String },
+  fatherOccupation: { type: String },
+  motherName: { type: String },
+  motherOccupation: { type: String },
+  parentsTogether: { type: Boolean },
+  siblings: [{
+    relation: { type: String },
+    gender: { type: String },
+    occupation: { type: String },
+  }],
   
-  // About & Interests
-  aboutMe: { type: String },
-  interests: [{ type: String }],
+  // Cultural and Religion
+  religion: { type: String },
+  community: { type: String },
+  gothram: { type: String },
+  motherTongue: { type: String },
+  zodiacSign: { type: String },
   
-  // Photos & Media
-  photos: [{ type: String }], // Array of image URLs
-  profilePicture: { type: String }, // URL to main profile picture
+  // Lifestyle, Habits, Health
+  dietaryHabits: { type: String },
+  smoking: { type: String },
+  drinking: { type: String },
+  hobbies: { type: String },
+  disabilities: { type: String },
+  medicalConditions: { type: String },
+  
+  profilePicture: { type: String }, // Keep for main profile picture
 }, {
   timestamps: true,
+  // Make Mongoose accept fields not strictly defined in the schema
+  strict: false,
 });
 
 const User = mongoose.model('User', userSchema);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './AdminDashboard.css';
+import './admindashboard.css';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');

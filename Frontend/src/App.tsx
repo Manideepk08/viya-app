@@ -16,6 +16,7 @@ import Matchlist from './pages/Dashboard/Matchlist';
 import ManagerProfileViewEdit from './pages/Manager/ManagerProfileViewEdit';
 import MediatorAssigned from './pages/payments-FAQ/mediator_assigned';
 import WelcomePage from './pages/welcomepages-main/WelcomePage';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -78,6 +79,7 @@ function App() {
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/help-faq" element={<HelpFAQ />} />
         <Route path="/manager-profile-view" element={<ManagerProfileViewEdit />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/manager" element={
           <>
             <main className="flex-grow pb-8">
