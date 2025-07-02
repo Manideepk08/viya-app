@@ -397,16 +397,36 @@ const ProfilePage = ({ onProfileComplete, isManager }) => {
 
 const App = ({ onProfileComplete, isManager: externalIsManager }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState('user');
+  const [userRole, setUserRole] = useState('user');
   const navigate = useNavigate();
 
   const handleLoginSuccess = (loginRole, user) => {
-    if (user.isProfileComplete) {
-      onProfileComplete(loginRole === 'manager');
-    } else {
-      setIsLoggedIn(true);
-      setRole(loginRole);
+    // Defensive check to prevent crash
+    if (!user) {
+      console.error("Login success was called without a user object. Role:", loginRole);
+      // For now, we can assume a default state or show an error
+      // For Google/Manager login, you'll need to fetch user data separately
+      // or adjust the login flow.
+      // Let's simulate a basic user object to avoid crashing.
+      user = { isProfileComplete: false };
     }
+
+    setUserRole(loginRole);
+    if (loginRole === 'user') {
+      if (user.isProfileComplete) {
+        navigate('/dashboard');
+      } else {
+        setIsLoggedIn(true);
+      }
+    } else if (loginRole === 'manager') {
+      navigate('/manager');
+    } else if (loginRole === 'admin') {
+      navigate('/admin');
+    }
+  };
+
+  const handleProfileComplete = () => {
+    // ... existing code ...
   };
 
   return (
@@ -414,9 +434,9 @@ const App = ({ onProfileComplete, isManager: externalIsManager }) => {
       {!isLoggedIn ? (
         <LoginPage onLoginSuccess={handleLoginSuccess} />
       ) : (
-        role === 'manager' ? (
+        userRole === 'manager' ? (
           <ProfilePage onProfileComplete={() => onProfileComplete(true)} isManager={true} />
-        ) : role === 'user' ? (
+        ) : userRole === 'user' ? (
           <ProfilePageUser onProfileComplete={() => onProfileComplete(false)} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-white text-2xl font-bold">Admin Dashboard (Coming Soon)</div>

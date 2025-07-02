@@ -1,7 +1,27 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 let User = require('../models/user.model');
 const auth = require('../middleware/auth');
+const path = require('path');
+
+// --- Multer Configuration ---
+// This will store files in a directory named 'uploads' in the 'Backend' folder
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // Create the directory if it doesn't exist
+    const fs = require('fs');
+    const uploadPath = path.join(__dirname, '../uploads/');
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
+// --- End Multer Configuration ---
 
 // @route   POST /users/send-otp
 // @desc    Send OTP to user's email or mobile for login/registration
@@ -104,47 +124,59 @@ router.post('/verify-otp', async (req, res) => {
 // @route   PUT /users/me
 // @desc    Create or update user's profile
 // @access  Private
-router.put('/me', auth, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
+router.put(
+    '/me', 
+    auth, 
+    // Use multer middleware to handle 'photos' (up to 5) and 'video' (up to 1)
+    upload.fields([{ name: 'photos', maxCount: 5 }, { name: 'video', maxCount: 1 }]), 
+    async (req, res) => {
+        try {
+            const user = await User.findById(req.user.id);
+            if (!user) {
+                return res.status(404).json({ msg: 'User not found' });
+            }
+
+            const profileData = { ...req.body };
+
+            // Parse stringified JSON fields from FormData
+            for (const key in profileData) {
+                try {
+                    profileData[key] = JSON.parse(profileData[key]);
+                } catch (e) {
+                    // This will fail for non-JSON strings, which is expected.
+                    // We just continue and use the raw value.
+                }
+            }
+            
+            // Handle file uploads
+            if (req.files) {
+                // Add paths of uploaded photos to the profile data
+                if (req.files.photos) {
+                    profileData.photos = req.files.photos.map(file => `/uploads/${file.filename}`);
+                }
+                // Add path of uploaded video to the profile data
+                if (req.files.video) {
+                    profileData.video = `/uploads/${req.files.video[0].filename}`;
+                }
+            }
+
+            // Use Object.assign to update the user with all fields.
+            Object.assign(user, profileData);
+
+            // Mark profile as complete
+            user.isProfileComplete = true;
+            
+            await user.save();
+            
+            res.json(user);
+
+        } catch (err) {
+            console.error(err.message, err.stack);
+            // Send back a more specific error message to the frontend
+            res.status(500).json({ msg: 'Server Error: ' + err.message });
         }
-
-        // Update user fields from request body
-        const {
-            fullName, dob, gender, city, state, country,
-            occupation, education, height, aboutMe, interests,
-            photos, profilePicture
-        } = req.body;
-        
-        // Assign values
-        if (fullName) user.fullName = fullName;
-        if (dob) user.dob = dob;
-        if (gender) user.gender = gender;
-        if (city) user.city = city;
-        if (state) user.state = state;
-        if (country) user.country = country;
-        if (occupation) user.occupation = occupation;
-        if (education) user.education = education;
-        if (height) user.height = height;
-        if (aboutMe) user.aboutMe = aboutMe;
-        if (interests) user.interests = interests;
-        if (photos) user.photos = photos;
-        if (profilePicture) user.profilePicture = profilePicture;
-
-        // Mark profile as complete
-        user.isProfileComplete = true;
-        
-        await user.save();
-        
-        res.json(user);
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
     }
-});
+);
 
 // @route   GET /users/me
 // @desc    Get current user's data (protected)

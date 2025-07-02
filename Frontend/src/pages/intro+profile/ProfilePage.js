@@ -136,7 +136,6 @@ const ProfilePage = ({ onProfileComplete }) => {
   // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Only submit if we're on the last step
     if (step === steps.length - 1) {
         try {
             const token = localStorage.getItem('token');
@@ -145,34 +144,59 @@ const ProfilePage = ({ onProfileComplete }) => {
                 return;
             }
 
-            // The backend expects `fullName`, not firstName and lastName.
-            const profileDataToSend = {
-                ...formData,
-                fullName: `${formData.firstName} ${formData.lastName}`,
-            };
-            
-            // Remove the now-redundant fields
-            delete profileDataToSend.firstName;
-            delete profileDataToSend.lastName;
+            // Use FormData for multipart/form-data, which is required for file uploads
+            const profileFormData = new FormData();
 
+            // Append all fields from the state to the FormData object
+            Object.keys(formData).forEach(key => {
+                if (key === 'photos' || key === 'video') {
+                    // Skip file fields here, we'll handle them separately
+                    return;
+                }
+                // Stringify nested objects and arrays
+                if (typeof formData[key] === 'object' && formData[key] !== null) {
+                    profileFormData.append(key, JSON.stringify(formData[key]));
+                } else {
+                    profileFormData.append(key, formData[key]);
+                }
+            });
+
+            // Append each photo file
+            formData.photos.forEach(photo => {
+                profileFormData.append('photos', photo);
+            });
+
+            // Append the video file if it exists
+            if (formData.video) {
+                profileFormData.append('video', formData.video);
+            }
+
+            // Combine first and last name for the backend
+            profileFormData.append('fullName', `${formData.firstName} ${formData.lastName}`);
 
             const config = {
                 headers: {
-                    'Content-Type': 'application/json',
+                    // Don't set 'Content-Type'. Axios will set it automatically for FormData.
                     'Authorization': `Bearer ${token}`
                 }
             };
 
-            await axios.put('http://localhost:5000/users/me', profileDataToSend, config);
+            await axios.put('http://localhost:5000/users/me', profileFormData, config);
 
             alert('Profile saved successfully!');
-            if (onProfileComplete) {
-                onProfileComplete();
-            }
 
         } catch (err) {
             console.error(err.response ? err.response.data : err.message);
-            alert('Error saving profile. Please check the console for details and try again.');
+            // Display the specific error message from the backend, or a default one.
+            const errorMsg = err.response && err.response.data && err.response.data.msg
+                ? err.response.data.msg
+                : 'An unexpected error occurred. Please try again.';
+            alert(`Error saving profile: ${errorMsg}`);
+        } finally {
+            // This will run after the try/catch, ensuring navigation happens
+            if (onProfileComplete) {
+                onProfileComplete();
+            }
         }
     }
   };
