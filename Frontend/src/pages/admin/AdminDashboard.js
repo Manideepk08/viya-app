@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import './AdminDashboard.css';
+import './admindashboard.css';
 import { useNavigate, Routes, Route, Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import '@fontsource/poppins';
 import '@fontsource/nunito';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUsers, faHandshake, faMoneyBillWave, faTachometerAlt, faUser, faChartLine, faScissors, faBook, faChartPie, faEdit, faArrowUp, faArrowDown, faCheckCircle, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import UserProfilesPage from './UserProfilesPage';
+import UserProfilesPage from './userprofilespage';
 import MediatorProfilesPage from './MediatorProfilesPage';
-import RevenueProfilesPage from './RevenueProfilesPage';
+import RevenueProfilesPage from './revenueprofilespage';
 import { mockProfiles } from '../../data/mockdata';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -52,6 +52,11 @@ const AdminDashboard = ({ onLogout }) => {
   const [mediatorVerifications, setMediatorVerifications] = useState(
     mockMediators.map((m, i) => ({ ...m, verification: i % 2 === 0 ? 'pending' : 'verified' }))
   );
+  const [mediaType, setMediaType] = useState('none');
+  const [messageType, setMessageType] = useState('');
+  const [messageText, setMessageText] = useState('');
+  const [messageMedia, setMessageMedia] = useState(null);
+  const [sendStatus, setSendStatus] = useState(null);
 
   const sidebarItems = [
     { label: 'Dashboard', icon: faUser, tab: 'dashboard' },
@@ -177,6 +182,44 @@ const AdminDashboard = ({ onLogout }) => {
     { year: '2023', revenue: 249600 },
     { year: '2024', revenue: 320000 },
   ];
+
+  const handleSendMessage = async (target) => {
+    setSendStatus(null);
+    if (!messageType || !messageText) {
+      setSendStatus({ success: false, message: 'Please fill in type and message.' });
+      return;
+    }
+  
+    // Prepare the payload
+    const payload = {
+      title: messageType,
+      message: messageText,
+      mediaType,
+      mediaUrl: '', // You can add logic to upload and get a URL if needed
+      type: messageType,
+      recipientType: target === 'all' ? 'all' : target
+    };
+  
+    try {
+      // Send to backend
+      await fetch('http://localhost:5000/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      setSendStatus({ success: true, message: `Message sent to ${target === 'all' ? 'users and mediators' : target}!` });
+      setTimeout(() => {
+        setShowAppEditModal(false);
+        setMessageType('');
+        setMessageText('');
+        setMediaType('none');
+        setMessageMedia(null);
+        setSendStatus(null);
+      }, 1500);
+    } catch (err) {
+      setSendStatus({ success: false, message: 'Failed to send message.' });
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'transactions') {
@@ -572,8 +615,84 @@ const AdminDashboard = ({ onLogout }) => {
             <div style={{ background: '#23243a', borderRadius: 16, boxShadow: '0 2px 8px #8f94fb33', padding: 20, color: '#fff' }}>
               <h2 style={{ color: '#ff9800', marginBottom: 18, fontSize: 22, fontWeight: 700, letterSpacing: 1 }}>Edit App Content</h2>
               <div style={{ color: '#bbb', fontSize: 18, marginTop: 24, textAlign: 'center' }}>
-                Feature coming soon! Here you will be able to edit app-wide content and settings.
+                <button
+                  style={{
+                    background: 'linear-gradient(90deg, #ff9800 60%, #ff5722 100%)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: 18,
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '12px 32px',
+                    cursor: 'pointer',
+                    marginBottom: 18
+                  }}
+                  onClick={() => setShowAppEditModal(true)}
+                >
+                  Send Message to Users/Mediators
+                </button>
+                <div style={{ color: '#bbb', fontSize: 16, marginTop: 12 }}>
+                  Here you can send announcements, ads, app anniversary wishes, success stories, or quotes with images to all users and mediators.
+                </div>
               </div>
+              {/* Modal for sending message */}
+              {showAppEditModal && (
+                <div style={{
+                  position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.35)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <div style={{ background: '#fff', color: '#23243a', borderRadius: 16, padding: 32, minWidth: 380, maxWidth: 480, boxShadow: '0 8px 32px #ffd70055', position: 'relative' }}>
+                    <button onClick={() => setShowAppEditModal(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 22, color: '#ff9800', cursor: 'pointer' }}>✕</button>
+                    <h3 style={{ color: '#ff9800', fontWeight: 700, fontSize: 22, marginBottom: 18 }}>Send Message</h3>
+                    <form onSubmit={e => e.preventDefault()}>
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={{ fontWeight: 600 }}>Type:</label>
+                        <select style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} value={messageType || ''} onChange={e => setMessageType(e.target.value)}>
+                          <option value="">Select type</option>
+                          <option value="announcement">Announcement</option>
+                          <option value="ad">Ad</option>
+                          <option value="anniversary">App Anniversary</option>
+                          <option value="success">Success Story/Quote</option>
+                          <option value="picture">Picture</option>
+                          <option value="event">Event</option>
+                          <option value="reminder">Reminder</option>
+                        </select>
+                      </div>
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={{ fontWeight: 600 }}>Message:</label>
+                        <textarea style={{ width: '100%', minHeight: 60, padding: 8, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} value={messageText || ''} onChange={e => setMessageText(e.target.value)} placeholder="Enter your message here..." />
+                      </div>
+                      <div style={{ marginBottom: 16 }}>
+                        <label style={{ fontWeight: 600 }}>Media Type:</label>
+                        <select style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc', marginTop: 4 }} value={mediaType} onChange={e => { setMediaType(e.target.value); setMessageMedia(null); }}>
+                          <option value="none">None</option>
+                          <option value="image">Image</option>
+                          <option value="video">Video</option>
+                        </select>
+                      </div>
+                      {mediaType === 'image' && (
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontWeight: 600 }}>Image:</label>
+                          <input type="file" accept="image/*" onChange={e => setMessageMedia(e.target.files[0])} style={{ marginTop: 4 }} />
+                          {messageMedia && <div style={{ marginTop: 8 }}><img src={URL.createObjectURL(messageMedia)} alt="preview" style={{ maxWidth: 120, maxHeight: 80, borderRadius: 8 }} /></div>}
+                        </div>
+                      )}
+                      {mediaType === 'video' && (
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontWeight: 600 }}>Video:</label>
+                          <input type="file" accept="video/*" onChange={e => setMessageMedia(e.target.files[0])} style={{ marginTop: 4 }} />
+                          {messageMedia && <div style={{ marginTop: 8 }}><video src={URL.createObjectURL(messageMedia)} controls style={{ maxWidth: 180, maxHeight: 120, borderRadius: 8 }} /></div>}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'center' }}>
+                        <button type="button" style={{ background: '#ff9800', color: '#fff', fontWeight: 700, border: 'none', borderRadius: 8, padding: '10px 22px', cursor: 'pointer' }} onClick={() => handleSendMessage('users')}>Send to Users</button>
+                        <button type="button" style={{ background: '#388e3c', color: '#fff', fontWeight: 700, border: 'none', borderRadius: 8, padding: '10px 22px', cursor: 'pointer' }} onClick={() => handleSendMessage('mediators')}>Send to Mediators</button>
+                        <button type="button" style={{ background: '#23243a', color: '#fff', fontWeight: 700, border: 'none', borderRadius: 8, padding: '10px 22px', cursor: 'pointer' }} onClick={() => handleSendMessage('all')}>Send to Both</button>
+                      </div>
+                      {sendStatus && <div style={{ marginTop: 18, color: sendStatus.success ? '#388e3c' : '#b71c1c', fontWeight: 600 }}>{sendStatus.message}</div>}
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -34,6 +34,9 @@ connectDB();
 const usersRouter = require('./routes/users');
 app.use('/users', usersRouter);
 
+const notificationsRouter = require('./routes/notifications');
+app.use('/notifications', notificationsRouter);
+
 app.get('/', (req, res) => {
   res.send('Hello from Viya App Backend!');
 });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import NotificationBanner from '../../components/NotificationBanner';
 
 const steps = [
   'Basic Personal Details',
@@ -64,6 +65,7 @@ const ProfilePage = ({ onProfileComplete }) => {
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState(initialFormData);
   const [photoPreviews, setPhotoPreviews] = useState([]);
+  const userId = localStorage.getItem('userId');
 
   // Handle input changes
   const handleChange = (e) => {
@@ -488,90 +490,93 @@ const ProfilePage = ({ onProfileComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-amber-50 flex flex-col items-center justify-start py-6">
-      {/* Thoranam row */}
-      <div className="w-full flex flex-row bg-amber-50" style={{ height: '80px' }}>
-        <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-        <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-        <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
-      </div>
-      {/* Logo and Title */}
-      <div className="flex justify-center items-center py-4 bg-amber-50">
-        <div className="flex items-center gap-4">
-          <h1 className="text-[#1a0f10] text-2xl font-bold leading-tight tracking-[-0.015em]">Viya</h1>
-          <img src="/logo_nobg.png" alt="Viya Matrimony Logo" className="h-16 w-auto" />
-          <h1 className="text-[#1a0f10] text-2xl font-bold leading-tight tracking-[-0.015em]">Matrimony</h1>
+    <>
+      <NotificationBanner userId={userId} />
+      <div className="min-h-screen bg-amber-50 flex flex-col items-center justify-start py-6">
+        {/* Thoranam row */}
+        <div className="w-full flex flex-row bg-amber-50" style={{ height: '80px' }}>
+          <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
+          <img src="/thoraanam_nobg.png" alt="Thoranam" className="h-full w-1/3 object-cover" />
         </div>
-      </div>
-      {/* Step Progress Bar */}
-      <div className="flex flex-col items-center w-full mb-8">
-        <div className="flex items-center w-full max-w-3xl justify-between">
-          {steps.map((label, idx) => (
-            <React.Fragment key={label}>
-              <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => setStep(idx)}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all duration-300 focus:outline-none
-                    ${step > idx ? 'bg-blue-500 border-blue-500 text-white' : step === idx ? 'bg-white border-blue-500 text-blue-500' : 'bg-gray-200 border-gray-300 text-gray-400'}
-                    ${step !== idx ? 'hover:bg-blue-100 cursor-pointer' : ''}
-                  `}
-                  style={{ cursor: step !== idx ? 'pointer' : 'default' }}
-                  aria-label={`Go to step ${idx + 1}`}
-                >
-                  {step > idx ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  ) : (
-                    <span className="font-bold text-lg">{idx + 1}</span>
-                  )}
-                </button>
-                <span className={`mt-2 text-xs font-semibold ${step === idx ? 'text-blue-600' : 'text-gray-500'}`}>{label.split(' ')[0]}</span>
-              </div>
-              {idx < steps.length - 1 && (
-                <div className={`flex-1 h-1 mx-1 md:mx-2 rounded transition-all duration-300
-                  ${step > idx ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
-              )}
-            </React.Fragment>
-          ))}
+        {/* Logo and Title */}
+        <div className="flex justify-center items-center py-4 bg-amber-50">
+          <div className="flex items-center gap-4">
+            <h1 className="text-[#1a0f10] text-2xl font-bold leading-tight tracking-[-0.015em]">Viya</h1>
+            <img src="/logo_nobg.png" alt="Viya Matrimony Logo" className="h-16 w-auto" />
+            <h1 className="text-[#1a0f10] text-2xl font-bold leading-tight tracking-[-0.015em]">Matrimony</h1>
+          </div>
         </div>
-      </div>
-      {/* Profile Form and Content */}
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-3xl mt-4">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Create Your Profile</h1>
-          <div className="text-orange-500 font-semibold">Step {step + 1} of {steps.length}: {steps[step]}</div>
+        {/* Step Progress Bar */}
+        <div className="flex flex-col items-center w-full mb-8">
+          <div className="flex items-center w-full max-w-3xl justify-between">
+            {steps.map((label, idx) => (
+              <React.Fragment key={label}>
+                <div className="flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={() => setStep(idx)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-full border-2 transition-all duration-300 focus:outline-none
+                      ${step > idx ? 'bg-blue-500 border-blue-500 text-white' : step === idx ? 'bg-white border-blue-500 text-blue-500' : 'bg-gray-200 border-gray-300 text-gray-400'}
+                      ${step !== idx ? 'hover:bg-blue-100 cursor-pointer' : ''}
+                    `}
+                    style={{ cursor: step !== idx ? 'pointer' : 'default' }}
+                    aria-label={`Go to step ${idx + 1}`}
+                  >
+                    {step > idx ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    ) : (
+                      <span className="font-bold text-lg">{idx + 1}</span>
+                    )}
+                  </button>
+                  <span className={`mt-2 text-xs font-semibold ${step === idx ? 'text-blue-600' : 'text-gray-500'}`}>{label.split(' ')[0]}</span>
+                </div>
+                {idx < steps.length - 1 && (
+                  <div className={`flex-1 h-1 mx-1 md:mx-2 rounded transition-all duration-300
+                    ${step > idx ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
-        <form onSubmit={handleSubmit}>
-          {renderStep()}
-          <div className="flex justify-between mt-8">
-            <button 
-              type="button" 
-              onClick={prevStep} 
-              disabled={step === 0} 
-              className="px-4 py-2 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            {step === 5 ? (
-              <button 
-                type="submit" 
-                className="px-4 py-2 rounded bg-green-600 text-white"
-              >
-                Submit
-              </button>
-            ) : (
+        {/* Profile Form and Content */}
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-3xl mt-4">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Create Your Profile</h1>
+            <div className="text-orange-500 font-semibold">Step {step + 1} of {steps.length}: {steps[step]}</div>
+          </div>
+          <form onSubmit={handleSubmit}>
+            {renderStep()}
+            <div className="flex justify-between mt-8">
               <button 
                 type="button" 
-                onClick={nextStep} 
-                className="px-4 py-2 rounded bg-orange-500 text-white"
+                onClick={prevStep} 
+                disabled={step === 0} 
+                className="px-4 py-2 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
               >
-                Next
+                Previous
               </button>
-            )}
-          </div>
-        </form>
+              {step === 5 ? (
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 rounded bg-green-600 text-white"
+                >
+                  Submit
+                </button>
+              ) : (
+                <button 
+                  type="button" 
+                  onClick={nextStep} 
+                  className="px-4 py-2 rounded bg-orange-500 text-white"
+                >
+                  Next
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

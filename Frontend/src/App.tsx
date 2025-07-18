@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
 import IntroProfileApp from './pages/intro+profile/intro_profile';
@@ -17,9 +17,9 @@ import ManagerProfileViewEdit from './pages/Manager/ManagerProfileViewEdit';
 import MediatorAssigned from './pages/payments-FAQ/mediator_assigned';
 import WelcomePage from './pages/welcomepages-main/WelcomePage';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import UserProfilesPage from './pages/admin/UserProfilesPage';
+import UserProfilesPage from './pages/admin/userprofilespage';
 import MediatorProfilesPage from './pages/admin/MediatorProfilesPage';
-import RevenueProfilesPage from './pages/admin/RevenueProfilesPage';
+import RevenueProfilesPage from './pages/admin/revenueprofilespage';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -90,6 +90,7 @@ function App() {
           </>
         } />
         <Route path="/manager-assigned" element={<MediatorAssigned />} />
+        <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
         <Route path="/admin-dashboard" element={<AdminDashboard onLogout={() => { setIsLoggedIn(false); navigate('/'); }} />}>
           <Route path="users" element={<UserProfilesPage />} />
           <Route path="mediators" element={<MediatorProfilesPage />} />
