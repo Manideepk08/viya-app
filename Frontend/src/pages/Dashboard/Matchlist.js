@@ -3,6 +3,11 @@ import '../../App.css';
 import ProfileDetailsModal from '../../components/dashboard/ProfileDetailsModal';
 import NotificationBanner from '../../components/NotificationBanner';
 
+const getPhotoUrl = (photo) => {
+  if (!photo) return '/default-profile.png';
+  return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+};
+
 const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles = [], onNavigate = (path) => {} }) => {
   const [activeTab, setActiveTab] = useState('sent');
   const [chatProfile, setChatProfile] = useState(() => {
@@ -104,7 +109,7 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
           {profiles.map(profile => (
             <li key={profile._id} className="py-4 flex items-center space-x-4">
               <img
-                src={profile.photos[0]}
+                src={getPhotoUrl(profile.photos && profile.photos[0])}
                 alt={profile.name}
                 className="w-16 h-16 rounded-full object-cover border-2 border-orange-200 cursor-pointer"
                 onClick={() => handleProfileClick(profile)}

@@ -91,6 +91,8 @@ const LoginPage = ({ onLoginSuccess }) => {
 
       // Store token
       localStorage.setItem('token', res.data.token);
+      // Store userId (MongoDB _id)
+      localStorage.setItem('userId', res.data.user.id || res.data.user._id);
 
       // Set auth header for future requests
       axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;

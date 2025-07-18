@@ -27,6 +27,11 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
     onClose();
   };
 
+  const getPhotoUrl = (photo) => {
+    if (!photo) return '/default-profile.png';
+    return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+  };
+
   // Helper for displaying a field
   const Field = ({ label, value }) => (
     <div className="flex items-center mb-2">
@@ -73,7 +78,7 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
                     />
                   ) : (
                     <img
-                      src={media[mediaIndex]}
+                      src={getPhotoUrl(media[mediaIndex])}
                       alt={`Profile media ${mediaIndex + 1}`}
                       className="w-72 h-72 rounded-2xl object-cover border-4 border-orange-200 shadow-lg"
                       onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/300x300/9CA3AF/ffffff?text=N/A'; }}

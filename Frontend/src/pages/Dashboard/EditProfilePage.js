@@ -27,8 +27,17 @@ const EditProfilePage = () => {
       })
       .then(data => {
         // Set defaults for missing fields
+        let firstName = '';
+        let lastName = '';
+        if (data.fullName) {
+          const parts = data.fullName.split(' ');
+          firstName = parts[0];
+          lastName = parts.slice(1).join(' ');
+        }
         const safeData = {
           ...data,
+          firstName,
+          lastName,
           photos: Array.isArray(data.photos) ? data.photos : [],
           education: Array.isArray(data.education) ? data.education : [],
           siblings: Array.isArray(data.siblings) ? data.siblings : [],
@@ -218,6 +227,11 @@ const EditProfilePage = () => {
   const residingAddress = (profileData && profileData.residingAddress) ? profileData.residingAddress : {};
   const nativeAddress = (profileData && profileData.nativeAddress) ? profileData.nativeAddress : {};
 
+  const getPhotoUrl = (photo) => {
+    if (!photo) return '/default-profile.png';
+    return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+  };
+
   return (
     <div className="container mx-auto p-6 bg-white shadow-xl rounded-lg mt-8">
       <div className="flex justify-between items-center mb-6 border-b pb-3">
@@ -236,7 +250,7 @@ const EditProfilePage = () => {
           {Array.isArray(profileData.photos) ? profileData.photos.map((photo, index) => (
             <div key={index} className="relative">
               <img
-                src={photo}
+                src={getPhotoUrl(photo)}
                 alt={`Profile ${index + 1}`}
                 className="w-32 h-32 rounded-lg object-cover border-2 border-gray-300"
               />

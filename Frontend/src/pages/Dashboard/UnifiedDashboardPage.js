@@ -196,14 +196,16 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
   if (error) return <div>{error}</div>;
 
   const renderProfileCard = (profile, key) => {
-    const isLiked = likedProfiles.includes(profile.id);
-    if (viewMode === 'list') {
-      return (
-        <div key={key} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-[1.02] transition-transform duration-300 ease-in-out relative">
+    const profileId = profile._id || profile.id || key;
+    const isLiked = likedProfiles.includes(profileId);
+    return (
+      <div key={key} className="flex flex-col h-full bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out relative">
+        {/* Card content */}
+        <div className="flex-grow p-4 flex flex-col">
           {/* Like Icon */}
           <button
             className="absolute top-3 right-3 z-10"
-            onClick={() => toggleLike(profile.id)}
+            onClick={() => toggleLike(profileId)}
             aria-label={isLiked ? 'Unlike' : 'Like'}
           >
             <Heart
@@ -212,96 +214,16 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
               fill={isLiked ? 'currentColor' : 'none'}
             />
           </button>
-          <div className="flex items-center p-4">
-            <div className="relative mr-4 cursor-pointer" onClick={() => handleViewMore(profile)}>
-              <img 
-                className="w-20 h-20 rounded-full object-cover border-4 border-indigo-200" 
-                src={getPhotoUrl(profile.photos[0])} 
-                alt={profile.name} 
-              />
-              {profile.verified && (
-                <div className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full px-1 py-0.5 text-xs font-semibold">
-                  ✓
-                </div>
-              )}
-            </div>
-            <div className="flex-grow cursor-pointer" onClick={() => handleViewMore(profile)}>
-              <h3 className="text-lg font-bold text-gray-900">{profile.name}</h3>
-              <p className="text-md text-orange-500 font-semibold">{getAge(profile)} years old</p>
-              
-              <div className="mt-2 space-y-1 text-gray-700 text-sm">
-                <div className="flex items-center">
-                  <Book size={14} className="mr-2 text-gray-500" />
-                  <span>{Array.isArray(profile.education) ? profile.education.map((edu) => [edu.level, edu.stream, edu.institute].filter(Boolean).join(' ')).join(', ') : (profile.education || '')}</span>
-                </div>
-                <div className="flex items-center">
-                  <Briefcase size={14} className="mr-2 text-gray-500" />
-                  <span>{profile.job}</span>
-                </div>
-                <div className="flex items-center">
-                  <MapPin size={14} className="mr-2 text-gray-500" />
-                  <span>{`${profile.city}, ${profile.state}`}</span>
-                </div>
+          <div className="relative cursor-pointer mb-4" onClick={() => handleViewMore(profile)}>
+            <img className="w-full h-60 object-cover" src={getPhotoUrl(profile.photos && profile.photos[0])} alt={profile.name} />
+            {profile.verified && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-semibold">
+                Verified
               </div>
-            </div>
-            <div className="flex flex-col space-y-2">
-              <button
-                className="flex items-center justify-center bg-white border border-gray-300 text-gray-700 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                onClick={() => handleViewMore(profile)}
-              >
-                <Eye size={14} className="mr-1" />
-                View
-              </button>
-              {currentUser.gotra === profile.gotra ? (
-                <div>
-                  <button 
-                    disabled 
-                    className="flex items-center justify-center bg-gray-200 text-gray-400 rounded-lg px-3 py-2 text-sm font-medium cursor-not-allowed"
-                  >
-                    <Heart size={14} className="mr-1" />
-                    Same Gotra
-                  </button>
-                  <p className="text-red-500 text-xs mt-1 w-24">Same Gothram</p>
-                </div>
-              ) : (
-                <button className="flex items-center justify-center bg-orange-500 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500" onClick={() => handleSendInterest(profile)}>
-                  <Send size={14} className="mr-1" />
-                  Interest
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        </div>
-      );
-    }
-
-    // Grid view (original dashboard style)
-    return (
-      <div key={key} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out relative">
-        {/* Like Icon */}
-        <button
-          className="absolute top-3 right-3 z-10"
-          onClick={() => toggleLike(profile.id)}
-          aria-label={isLiked ? 'Unlike' : 'Like'}
-        >
-          <Heart
-            size={24}
-            className={isLiked ? 'text-red-500 fill-red-500' : 'text-gray-300'}
-            fill={isLiked ? 'currentColor' : 'none'}
-          />
-        </button>
-        <div className="relative cursor-pointer" onClick={() => handleViewMore(profile)}>
-          <img className="w-full h-60 object-cover" src={getPhotoUrl(profile.photos[0])} alt={profile.name} />
-          {profile.verified && (
-            <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-semibold">
-              Verified
-            </div>
-          )}
-        </div>
-        <div className="p-4 cursor-pointer" onClick={() => handleViewMore(profile)}>
           <h3 className="text-xl font-bold text-gray-900">{profile.name}</h3>
           <p className="text-md text-orange-500 font-semibold">{getAge(profile)} years old</p>
-          
           <div className="mt-4 space-y-2 text-gray-700">
             <div className="flex items-center">
               <Book size={16} className="mr-2 text-gray-500" />
@@ -313,44 +235,35 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
             </div>
             <div className="flex items-center">
               <MapPin size={16} className="mr-2 text-gray-500" />
-              <span>{`${profile.city}, ${profile.state}`}</span>
+              <span>{`${profile.city || 'undefined'}, ${profile.state || 'undefined'}`}</span>
             </div>
           </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <button
-              className="flex items-center justify-center w-full bg-white border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-              onClick={() => handleViewMore(profile)}
-            >
-              <Eye size={16} className="mr-2" />
-              View More
-            </button>
-            {currentUser.gotra === profile.gotra ? (
-              <div>
-                <button 
-                  disabled 
-                  className="flex items-center justify-center w-full bg-gray-200 text-gray-400 rounded-lg px-4 py-2 text-sm font-medium cursor-not-allowed"
-                >
-                  <Heart size={16} className="mr-2" />
-                  Same Gotra
-                </button>
-                <p className="text-red-500 text-xs mt-1">You both belong to the same Gothram. Match not allowed by community rules.</p>
-              </div>
-            ) : (
-              <button className="flex items-center justify-center w-full bg-orange-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500" onClick={() => handleSendInterest(profile)}>
-                <Send size={16} className="mr-2" />
-                Send Interest
-              </button>
-            )}
-          </div>
+        </div>
+        {/* Fixed bottom buttons */}
+        <div className="flex justify-between items-center p-4 mt-auto bg-white border-t">
+          <button className="flex items-center justify-center w-1/2 mr-2 bg-white border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+            onClick={() => handleViewMore(profile)}>
+            <Eye size={16} className="mr-2" />
+            View More
+          </button>
+          <button className="flex items-center justify-center w-1/2 ml-2 bg-orange-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+            onClick={() => handleSendInterest(profile)}>
+            <Send size={16} className="mr-2" />
+            Send Interest
+          </button>
         </div>
       </div>
     );
   };
 
   const currentUserId = localStorage.getItem('userId');
-  // Only show users with a valid _id
-  const displayProfiles = filteredProfiles.filter(profile => profile._id);
+  console.log('Current userId:', currentUserId);
+  // Only show users with a valid _id and not the current user
+  const displayProfiles = filteredProfiles.filter(profile => {
+    const isCurrent = String(profile._id) === String(currentUserId);
+    if (isCurrent) console.log('Filtered out current user:', profile._id);
+    return profile._id && !isCurrent;
+  });
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -402,7 +315,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
 
         {/* Profile Cards */}
         {displayProfiles.length > 0 ? (
-          <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-4"}>
+          <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch" : "flex flex-col gap-4"}>
             {displayProfiles.map((profile, idx) => renderProfileCard(profile, profile._id || profile.id || idx))}
           </div>
         ) : (

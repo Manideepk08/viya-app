@@ -84,13 +84,7 @@ function App() {
         <Route path="/payment-methods" element={<PaymentMethods />} />
         <Route path="/help-faq" element={<HelpFAQ />} />
         <Route path="/manager-profile-view" element={<ManagerProfileViewEdit />} />
-        <Route path="/manager" element={
-          <>
-            <main className="flex-grow pb-8">
-              <ManagerDashboard />
-            </main>
-          </>
-        } />
+        <Route path="/manager" element={<ManagerDashboard />} />
         <Route path="/manager-assigned" element={<MediatorAssigned />} />
         <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
         <Route path="/admin-dashboard" element={<AdminDashboard onLogout={() => { setIsLoggedIn(false); navigate('/'); }} />}>
@@ -98,6 +92,11 @@ function App() {
           <Route path="mediators" element={<MediatorProfilesPage />} />
           <Route path="revenue" element={<RevenueProfilesPage />} />
         </Route>
+        <Route path="/dashboard/profile/:id" element={
+          <PrivateRoute>
+            <ProfileDetailsModalWrapper />
+          </PrivateRoute>
+        } />
         <Route path="/dashboard" element={
           <PrivateRoute>
             <>
@@ -114,11 +113,6 @@ function App() {
                 />
               </main>
             </>
-          </PrivateRoute>
-        } />
-        <Route path="/dashboard/profile/:id" element={
-          <PrivateRoute>
-            <ProfileDetailsModalWrapper />
           </PrivateRoute>
         } />
         <Route path="/matchlist" element={

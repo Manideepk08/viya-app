@@ -188,12 +188,7 @@ router.get('/me', auth, async (req, res) => {
       if (!user) {
           return res.status(404).json({ msg: 'User not found' });
       }
-      res.json({
-          id: user.id,
-          email: user.email,
-          mobile: user.mobile,
-          isProfileComplete: user.isProfileComplete,
-      });
+      res.json(user); // Return the full user object
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');
