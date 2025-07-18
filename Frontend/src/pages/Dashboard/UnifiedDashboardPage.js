@@ -1,16 +1,30 @@
 // src/pages/Dashboard/UnifiedDashboardPage.js
 import React, { useState, useEffect } from 'react';
-import { mockProfiles } from '../../data/mockdata';
 import { Heart, Send, Eye, Book, MapPin, Briefcase } from 'react-feather';
 import ProfileDetailsModal from '../../components/dashboard/ProfileDetailsModal';
 import Filters from '../../components/dashboard/Filters';
 import Button from '../../components/dashboard/button';
 import PaymentModal from '../payments-FAQ/PaymentModal';
 import Matchlist from './Matchlist';
+import { useNavigate } from 'react-router-dom';
+
+const getPhotoUrl = (photo) => {
+  if (!photo) return '/default-profile.png';
+  return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+};
+
+const getAge = (profile) => {
+  if (profile.age) return profile.age;
+  if (profile.dob) {
+    const dob = new Date(profile.dob);
+    const diffMs = Date.now() - dob.getTime();
+    const ageDt = new Date(diffMs);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
+  }
+  return '';
+};
 
 const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, setLikedProfiles, directChatProfiles, setDirectChatProfiles, onNavigate }) => {
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     age: '',
     state: '',
@@ -20,14 +34,37 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
     annualIncome: '',
     familyType: '',
   });
-  const [filteredProfiles, setFilteredProfiles] = useState(mockProfiles);
+  const [filteredProfiles, setFilteredProfiles] = useState([]);
+  const [allProfiles, setAllProfiles] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [interestProfile, setInterestProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const currentUser = {
     gotra: 'Shandilya',
   };
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('http://localhost:5000/users')
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        setAllProfiles(data);
+        setFilteredProfiles(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to fetch profiles');
+        setLoading(false);
+      });
+  }, []);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -35,7 +72,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
   };
 
   const applyFilters = () => {
-    let newFilteredProfiles = mockProfiles;
+    let newFilteredProfiles = allProfiles;
 
     if (filters.age) {
       newFilteredProfiles = newFilteredProfiles.filter((profile) => {
@@ -122,13 +159,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
   };
 
   const handleViewMore = (profile) => {
-    setSelectedProfile(profile);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedProfile(null);
+    navigate(`/dashboard/profile/${profile._id ? profile._id : profile.id}`);
   };
 
   const handleSendInterest = (profile) => {
@@ -159,13 +190,16 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
 
   useEffect(() => {
     applyFilters(); // Apply filters on initial load and whenever filters change
-  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filters, allProfiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const renderProfileCard = (profile) => {
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
+
+  const renderProfileCard = (profile, key) => {
     const isLiked = likedProfiles.includes(profile.id);
     if (viewMode === 'list') {
       return (
-        <div key={profile.id} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-[1.02] transition-transform duration-300 ease-in-out relative">
+        <div key={key} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:scale-[1.02] transition-transform duration-300 ease-in-out relative">
           {/* Like Icon */}
           <button
             className="absolute top-3 right-3 z-10"
@@ -182,7 +216,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
             <div className="relative mr-4 cursor-pointer" onClick={() => handleViewMore(profile)}>
               <img 
                 className="w-20 h-20 rounded-full object-cover border-4 border-indigo-200" 
-                src={profile.photos[0]} 
+                src={getPhotoUrl(profile.photos[0])} 
                 alt={profile.name} 
               />
               {profile.verified && (
@@ -193,12 +227,12 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
             </div>
             <div className="flex-grow cursor-pointer" onClick={() => handleViewMore(profile)}>
               <h3 className="text-lg font-bold text-gray-900">{profile.name}</h3>
-              <p className="text-md text-orange-500 font-semibold">{profile.age} years old</p>
+              <p className="text-md text-orange-500 font-semibold">{getAge(profile)} years old</p>
               
               <div className="mt-2 space-y-1 text-gray-700 text-sm">
                 <div className="flex items-center">
                   <Book size={14} className="mr-2 text-gray-500" />
-                  <span>{profile.education}</span>
+                  <span>{Array.isArray(profile.education) ? profile.education.map((edu) => [edu.level, edu.stream, edu.institute].filter(Boolean).join(' ')).join(', ') : (profile.education || '')}</span>
                 </div>
                 <div className="flex items-center">
                   <Briefcase size={14} className="mr-2 text-gray-500" />
@@ -243,7 +277,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
 
     // Grid view (original dashboard style)
     return (
-      <div key={profile.id} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out relative">
+      <div key={key} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out relative">
         {/* Like Icon */}
         <button
           className="absolute top-3 right-3 z-10"
@@ -257,7 +291,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
           />
         </button>
         <div className="relative cursor-pointer" onClick={() => handleViewMore(profile)}>
-          <img className="w-full h-60 object-cover" src={profile.photos[0]} alt={profile.name} />
+          <img className="w-full h-60 object-cover" src={getPhotoUrl(profile.photos[0])} alt={profile.name} />
           {profile.verified && (
             <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-semibold">
               Verified
@@ -266,12 +300,12 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
         </div>
         <div className="p-4 cursor-pointer" onClick={() => handleViewMore(profile)}>
           <h3 className="text-xl font-bold text-gray-900">{profile.name}</h3>
-          <p className="text-md text-orange-500 font-semibold">{profile.age} years old</p>
+          <p className="text-md text-orange-500 font-semibold">{getAge(profile)} years old</p>
           
           <div className="mt-4 space-y-2 text-gray-700">
             <div className="flex items-center">
               <Book size={16} className="mr-2 text-gray-500" />
-              <span>{profile.education}</span>
+              <span>{Array.isArray(profile.education) ? profile.education.map((edu) => [edu.level, edu.stream, edu.institute].filter(Boolean).join(' ')).join(', ') : (profile.education || '')}</span>
             </div>
             <div className="flex items-center">
               <Briefcase size={16} className="mr-2 text-gray-500" />
@@ -313,6 +347,10 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
       </div>
     );
   };
+
+  const currentUserId = localStorage.getItem('userId');
+  // Only show users with a valid _id
+  const displayProfiles = filteredProfiles.filter(profile => profile._id);
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -358,14 +396,14 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
         {/* Results Count */}
         <div className="mb-4 text-center">
           <p className="text-gray-600">
-            Showing {filteredProfiles.length} of {mockProfiles.length} profiles
+            Showing {displayProfiles.length} of {allProfiles.length} profiles
           </p>
         </div>
 
         {/* Profile Cards */}
-        {filteredProfiles.length > 0 ? (
+        {displayProfiles.length > 0 ? (
           <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-4"}>
-            {filteredProfiles.map(renderProfileCard)}
+            {displayProfiles.map((profile, idx) => renderProfileCard(profile, profile._id || profile.id || idx))}
           </div>
         ) : (
           <div className="text-center text-gray-600 p-10 bg-white rounded-lg shadow-md">
@@ -376,9 +414,9 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
       </div>
 
       <ProfileDetailsModal
-        profile={selectedProfile}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        profile={null} // No longer needed as modal is route-based
+        isOpen={false} // No longer needed as modal is route-based
+        onClose={() => {}} // No longer needed as modal is route-based
       />
       <PaymentModal
         show={showPaymentModal}

@@ -20,6 +20,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import UserProfilesPage from './pages/admin/userprofilespage';
 import MediatorProfilesPage from './pages/admin/MediatorProfilesPage';
 import RevenueProfilesPage from './pages/admin/revenueprofilespage';
+import PrivateRoute from './PrivateRoute';
+import ProfileDetailsModalWrapper from './pages/Dashboard/ProfileDetailsModalWrapper.js';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -96,55 +98,64 @@ function App() {
           <Route path="mediators" element={<MediatorProfilesPage />} />
           <Route path="revenue" element={<RevenueProfilesPage />} />
         </Route>
-        {isLoggedIn && (
-          <>
-            <Route path="/dashboard" element={
-              <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
-                <main className="flex-grow pb-8">
-                  <UnifiedDashboardPage
-                    sentInterests={sentInterests}
-                    setSentInterests={setSentInterests}
-                    likedProfiles={likedProfiles}
-                    setLikedProfiles={setLikedProfiles}
-                    directChatProfiles={directChatProfiles}
-                    setDirectChatProfiles={setDirectChatProfiles}
-                    onNavigate={navigate}
-                  />
-                </main>
-              </>
-            } />
-            <Route path="/matchlist" element={
-              <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
-                <main className="flex-grow pb-8">
-                  <Matchlist
-                    sentInterests={sentInterests}
-                    likedProfiles={likedProfiles}
-                    directChatProfiles={directChatProfiles}
-                    onNavigate={() => navigate}
-                  />
-                </main>
-              </>
-            } />
-            <Route path="/edit-profile" element={
-              <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
-                <main className="flex-grow pb-8">
-                  {isManager ? <ManagerProfilePage onProfileComplete={handleManagerProfileComplete} /> : <EditProfilePage />}
-                </main>
-              </>
-            } />
-            <Route path="/settings" element={
-              <>
-                <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
-                <main className="flex-grow pb-8">
-                  <SettingsPage />
-                </main>
-              </>
-            } />
-          </>
-        )}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <>
+              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
+              <main className="flex-grow pb-8">
+                <UnifiedDashboardPage
+                  sentInterests={sentInterests}
+                  setSentInterests={setSentInterests}
+                  likedProfiles={likedProfiles}
+                  setLikedProfiles={setLikedProfiles}
+                  directChatProfiles={directChatProfiles}
+                  setDirectChatProfiles={setDirectChatProfiles}
+                  onNavigate={navigate}
+                />
+              </main>
+            </>
+          </PrivateRoute>
+        } />
+        <Route path="/dashboard/profile/:id" element={
+          <PrivateRoute>
+            <ProfileDetailsModalWrapper />
+          </PrivateRoute>
+        } />
+        <Route path="/matchlist" element={
+          <PrivateRoute>
+            <>
+              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
+              <main className="flex-grow pb-8">
+                <Matchlist
+                  sentInterests={sentInterests}
+                  likedProfiles={likedProfiles}
+                  directChatProfiles={directChatProfiles}
+                  onNavigate={() => navigate}
+                />
+              </main>
+            </>
+          </PrivateRoute>
+        } />
+        <Route path="/edit-profile" element={
+          <PrivateRoute>
+            <>
+              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
+              <main className="flex-grow pb-8">
+                {isManager ? <ManagerProfilePage onProfileComplete={handleManagerProfileComplete} /> : <EditProfilePage />}
+              </main>
+            </>
+          </PrivateRoute>
+        } />
+        <Route path="/settings" element={
+          <PrivateRoute>
+            <>
+              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} />
+              <main className="flex-grow pb-8">
+                <SettingsPage />
+              </main>
+            </>
+          </PrivateRoute>
+        } />
       </Routes>
       <div className="w-full bg-gray-900 text-gray-200 text-center py-2 text-xs mt-12">
         © 2024 Viya Matrimony. All rights reserved.

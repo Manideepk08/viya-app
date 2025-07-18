@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './admindashboard.css';
+import './AdminDashboard.css';
 import { useNavigate, Routes, Route, Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import '@fontsource/poppins';

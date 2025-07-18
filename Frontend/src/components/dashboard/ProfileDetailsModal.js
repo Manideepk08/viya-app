@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import Button from './button.js'; // Import Button for use within Modal
 import Modal from './modal.js'; // Import Modal for the nested confirmation
 import PaymentModal from '../../pages/payments-FAQ/PaymentModal.js';
+import { useNavigate } from 'react-router-dom';
 
 const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
   const [mediaIndex, setMediaIndex] = useState(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const navigate = useNavigate();
 
   if (!isOpen || !profile) return null;
 
@@ -41,12 +43,18 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
     </div>
   );
 
+  // Updated close handler to always go to dashboard
+  const handleClose = () => {
+    navigate('/dashboard');
+    if (onClose) onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 overflow-y-auto">
       <div className="bg-[#fffaf5] w-full h-full p-0 m-0 relative flex flex-col">
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-6 right-8 text-gray-600 hover:text-gray-900 text-3xl font-bold z-50"
         >
           &times;

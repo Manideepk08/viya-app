@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../../components/dashboard/button.js';
 import Modal from '../../components/dashboard/modal.js';
 
@@ -8,82 +8,43 @@ const EditProfilePage = () => {
   const [modalMessage, setModalMessage] = useState('');
   const [modalTitle, setModalTitle] = useState('');
   const [showConfirmButton, setShowConfirmButton] = useState(false);
+  const [profileData, setProfileData] = useState(null);
+  const [editableData, setEditableData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Main profile data state
-  const [profileData, setProfileData] = useState({
-    // Basic Personal Details
-    firstName: 'John',
-    lastName: 'Doe',
-    gender: 'male',
-    dob: '1995-05-15',
-    maritalStatus: 'single',
-    height: "5'8\"",
-    weight: '70',
-    bloodGroup: 'O+',
-    photos: ['https://placehold.co/150x150/A0A0A0/ffffff?text=Photo+1'],
-    video: null,
-    aboutMe: 'I am a software developer with a passion for technology and innovation. I enjoy reading, traveling, and spending time with family.',
-    
-    // Contact Information
-    phone: '9876543210',
-    email: 'john.doe@example.com',
-    aadhar: '123456789012',
-    residingAddress: {
-      address: '123 Main Street',
-      village: 'Downtown',
-      city: 'Hyderabad',
-      state: 'Telangana',
-      pincode: '500001'
-    },
-    nativeAddress: {
-      address: '456 Native Street',
-      village: 'Hometown',
-      city: 'Warangal',
-      state: 'Telangana',
-      pincode: '506001'
-    },
-    sameAddress: false,
-    
-    // Education and Occupation
-    education: [
-      { level: 'degree', stream: 'Computer Science', institute: 'JNTU Hyderabad' },
-      { level: 'postgraduate', stream: 'Software Engineering', institute: 'IIIT Hyderabad' }
-    ],
-    employeeRole: 'Senior Software Developer',
-    company: 'Tech Solutions Inc.',
-    annualSalary: '800000',
-    workLocation: { city: 'Hyderabad', state: 'Telangana', country: 'India' },
-    
-    // Family Details
-    familyType: 'nuclear',
-    familyStatus: 'middle',
-    fatherName: 'Robert Doe',
-    fatherOccupation: 'Engineer',
-    motherName: 'Mary Doe',
-    motherOccupation: 'Teacher',
-    parentsTogether: true,
-    siblings: [
-      { relation: 'elder', gender: 'female', occupation: 'Doctor' }
-    ],
-    
-    // Cultural and Religion
-    religion: 'Hindu',
-    community: 'Banjara',
-    gothram: 'Vashishta',
-    motherTongue: 'Telugu',
-    zodiacSign: 'leo',
-    
-    // Lifestyle, Habits, Health
-    dietaryHabits: 'vegetarian',
-    smoking: 'never',
-    drinking: 'never',
-    hobbies: 'Reading, Traveling, Photography, Cooking',
-    disabilities: '',
-    medicalConditions: ''
-  });
-
-  // Editable copy for form editing
-  const [editableData, setEditableData] = useState({ ...profileData });
+  useEffect(() => {
+    setLoading(true);
+    // You may need to add authentication headers here
+    fetch('http://localhost:5000/users/me', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        // Set defaults for missing fields
+        const safeData = {
+          ...data,
+          photos: Array.isArray(data.photos) ? data.photos : [],
+          education: Array.isArray(data.education) ? data.education : [],
+          siblings: Array.isArray(data.siblings) ? data.siblings : [],
+          residingAddress: data.residingAddress || {},
+          nativeAddress: data.nativeAddress || {},
+          workLocation: data.workLocation || { city: '', state: '', country: '' },
+        };
+        setProfileData(safeData);
+        setEditableData(safeData);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to fetch profile');
+        setLoading(false);
+      });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -170,12 +131,32 @@ const EditProfilePage = () => {
   };
 
   const handleSave = () => {
-    setProfileData({ ...editableData });
-    setIsEditing(false);
-    setModalTitle('Profile Updated');
-    setModalMessage('Your profile has been successfully updated!');
-    setShowConfirmButton(false);
-    setIsModalOpen(true);
+    setLoading(true);
+    fetch('http://localhost:5000/users/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(editableData)
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        setProfileData(data);
+        setIsEditing(false);
+        setModalTitle('Profile Updated');
+        setModalMessage('Your profile has been successfully updated!');
+        setShowConfirmButton(false);
+        setIsModalOpen(true);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to update profile');
+        setLoading(false);
+      });
   };
 
   const handleCancel = () => {
@@ -229,6 +210,14 @@ const EditProfilePage = () => {
     </div>
   );
 
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
+
+  // Add safe defaults for nested objects
+  const workLocation = (profileData && profileData.workLocation) ? profileData.workLocation : { city: '', state: '', country: '' };
+  const residingAddress = (profileData && profileData.residingAddress) ? profileData.residingAddress : {};
+  const nativeAddress = (profileData && profileData.nativeAddress) ? profileData.nativeAddress : {};
+
   return (
     <div className="container mx-auto p-6 bg-white shadow-xl rounded-lg mt-8">
       <div className="flex justify-between items-center mb-6 border-b pb-3">
@@ -244,7 +233,7 @@ const EditProfilePage = () => {
       <div className="mb-8">
         <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Profile Photos</h3>
         <div className="flex flex-wrap gap-4">
-          {profileData.photos.map((photo, index) => (
+          {Array.isArray(profileData.photos) ? profileData.photos.map((photo, index) => (
             <div key={index} className="relative">
               <img
                 src={photo}
@@ -260,7 +249,7 @@ const EditProfilePage = () => {
                 </button>
               )}
             </div>
-          ))}
+          )) : null}
           {isEditing && (
             <label className="cursor-pointer">
               <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
@@ -379,7 +368,7 @@ const EditProfilePage = () => {
       <div className="mb-8">
         <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Residing Address</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(profileData.residingAddress).map(([key, value]) => (
+          {Object.entries(residingAddress).map(([key, value]) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
                 {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -405,7 +394,7 @@ const EditProfilePage = () => {
       <div className="mb-8">
         <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Native Address</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(profileData.nativeAddress).map(([key, value]) => (
+          {Object.entries(nativeAddress).map(([key, value]) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
                 {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -434,7 +423,7 @@ const EditProfilePage = () => {
         {/* Education */}
         <div className="mb-6">
           <h4 className="text-lg font-semibold mb-3">Education</h4>
-          {profileData.education.map((edu, idx) => (
+          {Array.isArray(profileData.education) ? profileData.education.map((edu, idx) => (
             <div key={idx} className="mb-4 p-4 border border-gray-200 rounded-lg">
               {isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -484,7 +473,7 @@ const EditProfilePage = () => {
                 </div>
               )}
             </div>
-          ))}
+          )) : null}
           {isEditing && (
             <button
               onClick={addEducation}
@@ -537,7 +526,7 @@ const EditProfilePage = () => {
               </div>
             ) : (
               <div className="w-full p-3 bg-gray-50 border border-gray-200 rounded-md">
-                {`${profileData.workLocation.city}, ${profileData.workLocation.state}, ${profileData.workLocation.country}`}
+                {`${workLocation.city}, ${workLocation.state}, ${workLocation.country}`}
               </div>
             )}
           </div>

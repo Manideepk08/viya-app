@@ -1,30 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../App.css';
-import { mockProfiles } from '../../data/mockdata';
 import ProfileDetailsModal from '../../components/dashboard/ProfileDetailsModal';
 import NotificationBanner from '../../components/NotificationBanner';
 
 const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles = [], onNavigate = (path) => {} }) => {
   const [activeTab, setActiveTab] = useState('sent');
   const [chatProfile, setChatProfile] = useState(() => {
-    // Restore chat profile from localStorage if available
     const saved = localStorage.getItem('chatProfile');
     return saved ? JSON.parse(saved) : null;
   });
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [isChatMinimized, setIsChatMinimized] = useState(() => {
-    // Restore minimized state from localStorage
     return localStorage.getItem('isChatMinimized') === 'true';
   });
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [allProfiles, setAllProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const userId = localStorage.getItem('userId');
 
+  useEffect(() => {
+    setLoading(true);
+    fetch('http://localhost:5000/users')
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        setAllProfiles(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('Failed to fetch profiles');
+        setLoading(false);
+      });
+  }, []);
+
   // Defensive: always treat IDs as numbers for comparison
-  const sentProfiles = mockProfiles.filter(p => sentInterests.map(Number).includes(Number(p.id)));
-  const likedProfilesList = mockProfiles.filter(p => likedProfiles.map(Number).includes(Number(p.id)));
+  const sentProfiles = allProfiles.filter(p => sentInterests.map(String).includes(String(p._id)));
+  const likedProfilesList = allProfiles.filter(p => likedProfiles.map(String).includes(String(p._id)));
 
   const handleOpenChat = (profile) => {
     setChatProfile(profile);
@@ -78,14 +95,14 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
   };
 
   const renderProfiles = (profiles, emptyMsg, showChat = false) => {
-    if (mockProfiles.length === 0) {
+    if (allProfiles.length === 0) {
       return <div className="text-gray-500 text-center py-8">No profiles available.</div>;
     }
     if (profiles.length > 0) {
       return (
         <ul className="divide-y">
           {profiles.map(profile => (
-            <li key={profile.id} className="py-4 flex items-center space-x-4">
+            <li key={profile._id} className="py-4 flex items-center space-x-4">
               <img
                 src={profile.photos[0]}
                 alt={profile.name}
@@ -111,6 +128,9 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
     }
     return <div className="text-gray-500 text-center py-8">{emptyMsg}</div>;
   };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <>

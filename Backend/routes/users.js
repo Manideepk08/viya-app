@@ -4,6 +4,7 @@ const multer = require('multer');
 let User = require('../models/user.model');
 const auth = require('../middleware/auth');
 const path = require('path');
+const mongoose = require('mongoose');
 
 // --- Multer Configuration ---
 // This will store files in a directory named 'uploads' in the 'Backend' folder
@@ -28,43 +29,41 @@ const upload = multer({ storage: storage });
 // @access  Public
 router.post('/send-otp', async (req, res) => {
     try {
-        const { mobileEmail } = req.body;
-        
+        let { mobileEmail } = req.body;
         if (!mobileEmail) {
             return res.status(400).json({ msg: 'Please enter an email or mobile number' });
         }
-
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mobileEmail);
-        const isMobile = /^[6-9]\d{9}$/.test(mobileEmail);
-
+        mobileEmail = mobileEmail.trim();
+        // Accept mobile numbers with or without country code
+        let isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mobileEmail);
+        let isMobile = /^\+?\d{10,15}$/.test(mobileEmail) || /^[6-9]\d{9}$/.test(mobileEmail);
         if (!isEmail && !isMobile) {
-            return res.status(400).json({ msg: 'Please enter a valid email or 10-digit mobile number' });
+            return res.status(400).json({ msg: 'Please enter a valid email or mobile number' });
         }
-        
-        const query = isEmail ? { email: mobileEmail } : { mobile: mobileEmail };
-
+        let query = {};
+        if (isEmail) {
+            query.email = mobileEmail;
+        } else {
+            // Remove country code if present
+            let mobile = mobileEmail.replace(/^\+91|\D/g, '');
+            if (mobile.length > 10) mobile = mobile.slice(-10);
+            query.mobile = mobile;
+        }
         // Generate OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
         const otpExpires = new Date(new Date().getTime() + 10 * 60 * 1000); // 10 minutes expiry
-
         // Find user or create a new one if they don't exist
         let user = await User.findOne(query);
         if (!user) {
             user = new User(query);
         }
-
         user.otp = otp;
         user.otpExpires = otpExpires;
         await user.save();
-
         // --- OTP Sending Simulation ---
-        // In a real app, you'd use a service like Nodemailer to send an email.
-        // For development, we'll just log the OTP to the console.
         console.log(`OTP for ${mobileEmail} is: ${otp}`);
         // --- End Simulation ---
-
         res.json({ msg: `OTP has been sent to ${mobileEmail}. It will expire in 10 minutes.` });
-
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -76,35 +75,38 @@ router.post('/send-otp', async (req, res) => {
 // @access  Public
 router.post('/verify-otp', async (req, res) => {
     try {
-        const { mobileEmail, otp } = req.body;
-
+        let { mobileEmail, otp } = req.body;
         if (!mobileEmail || !otp) {
             return res.status(400).json({ msg: 'Please provide email/mobile and OTP' });
         }
-        
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mobileEmail);
-        const query = isEmail ? { email: mobileEmail } : { mobile: mobileEmail };
-
+        mobileEmail = mobileEmail.trim();
+        let isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mobileEmail);
+        let isMobile = /^\+?\d{10,15}$/.test(mobileEmail) || /^[6-9]\d{9}$/.test(mobileEmail);
+        let query = {};
+        if (isEmail) {
+            query.email = mobileEmail;
+        } else if (isMobile) {
+            let mobile = mobileEmail.replace(/^\+91|\D/g, '');
+            if (mobile.length > 10) mobile = mobile.slice(-10);
+            query.mobile = mobile;
+        } else {
+            return res.status(400).json({ msg: 'Please enter a valid email or mobile number' });
+        }
         const user = await User.findOne(query);
-
         if (!user) {
             return res.status(400).json({ msg: 'User not found. Please try sending OTP again.' });
         }
-
         // Check if OTP is correct and not expired
         if (user.otp !== otp || user.otpExpires < new Date()) {
             return res.status(400).json({ msg: 'Invalid or expired OTP. Please try again.' });
         }
-
         // Clear OTP after verification
         user.otp = undefined;
         user.otpExpires = undefined;
         await user.save();
-
         // Create and assign a JWT
         const payload = { id: user.id };
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-
         res.json({
             token,
             user: {
@@ -114,7 +116,6 @@ router.post('/verify-otp', async (req, res) => {
                 isProfileComplete: user.isProfileComplete,
             }
         });
-
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -197,6 +198,34 @@ router.get('/me', auth, async (req, res) => {
       console.error(err.message);
       res.status(500).send('Server Error');
     }
+});
+
+// Get all users (for dashboard)
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// Get a single user by ID (ObjectId or string)
+router.get('/:id', async (req, res) => {
+  try {
+    let user = null;
+    if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+      user = await User.findById(req.params.id);
+    }
+    // Fallback: try to find by string id (for legacy/mock data)
+    if (!user) {
+      user = await User.findOne({ _id: req.params.id });
+    }
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
 });
 
 module.exports = router; 
