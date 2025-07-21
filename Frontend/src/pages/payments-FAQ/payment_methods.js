@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const PaymentMethods = () => {
@@ -8,22 +8,65 @@ const PaymentMethods = () => {
   const amount = location.state?.amount;
   const profileId = location.state?.profileId;
   const navigate = useNavigate();
+  const hasSentInterest = location.state?.hasSentInterest;
 
   // Generate QR code URL with amount for UPI
   const qrAmount = amount ? String(amount) : '';
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=example@upi&pn=ViyaApp&am=${qrAmount}`;
 
-  const handlePaymentSuccess = () => {
-    // If direct chat payment, store profileId in localStorage
-    if (amount === 3000 && profileId) {
-      let directChatProfiles = JSON.parse(localStorage.getItem('directChatProfiles') || '[]');
-      if (!directChatProfiles.includes(profileId)) {
-        directChatProfiles.push(profileId);
-        localStorage.setItem('directChatProfiles', JSON.stringify(directChatProfiles));
+  const handlePaymentSuccess = async () => {
+    const token = localStorage.getItem('token');
+    let success = true;
+
+    try {
+      if (amount === 199 && profileId && !hasSentInterest) {
+        // Only add to sentInterests for 199 payment if not already sent
+        const res = await fetch(`http://localhost:5000/users/send-interest/${profileId}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) success = false;
       }
+      if (amount === 3000 && profileId) {
+        // Always add to directChatProfiles for 3000 payment
+        const res1 = await fetch(`http://localhost:5000/users/direct-chat/${profileId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ amount: 3000 })
+        });
+        // Only add to sentInterests if not already sent
+        let res2 = { ok: true };
+        if (!hasSentInterest) {
+          res2 = await fetch(`http://localhost:5000/users/send-interest/${profileId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        }
+        if (!res1.ok || !res2.ok) success = false;
+      }
+    } catch (err) {
+      success = false;
     }
-    setPaymentSuccess(true);
+
+    if (success) {
+      setPaymentSuccess(true);
+    } else {
+      alert('There was a problem updating your interest. Please try again.');
+    }
   };
+
+  // Redirect to dashboard after payment success
+  useEffect(() => {
+    if (paymentSuccess) {
+      const timer = setTimeout(() => {
+        window.location.href = '/dashboard'; // Hard reload to ensure fresh state
+      }, 2000); // 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [paymentSuccess]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#fdeeee', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>

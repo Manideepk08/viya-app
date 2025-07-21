@@ -149,17 +149,30 @@ router.put(
                 }
             }
             
-            // Handle file uploads
-            if (req.files) {
-                // Add paths of uploaded photos to the profile data
-                if (req.files.photos) {
-                    profileData.photos = req.files.photos.map(file => `/uploads/${file.filename}`);
-                }
-                // Add path of uploaded video to the profile data
-                if (req.files.video) {
-                    profileData.video = `/uploads/${req.files.video[0].filename}`;
-                }
+            // Handle file uploads and photo deletion logic
+            let finalPhotos = [];
+            // Accept both single and multiple existingPhotos[]
+            if (profileData['existingPhotos[]']) {
+              if (Array.isArray(profileData['existingPhotos[]'])) {
+                finalPhotos = profileData['existingPhotos[]'];
+              } else {
+                finalPhotos = [profileData['existingPhotos[]']];
+              }
             }
+            if (req.files && req.files.photos) {
+              finalPhotos = finalPhotos.concat(req.files.photos.map(file => `/uploads/${file.filename}`));
+            }
+            // Debug log
+            console.log('Final photos array to be saved:', finalPhotos);
+            user.photos = finalPhotos;
+            // Remove from profileData so Object.assign doesn't overwrite
+            delete profileData.photos;
+            delete profileData['existingPhotos[]'];
+
+            // Prevent overwriting interaction arrays unless explicitly provided
+            if (!('likedProfiles' in profileData)) delete user.likedProfiles;
+            if (!('sentInterests' in profileData)) delete user.sentInterests;
+            if (!('directChatProfiles' in profileData)) delete user.directChatProfiles;
 
             // Use Object.assign to update the user with all fields.
             Object.assign(user, profileData);
@@ -198,10 +211,212 @@ router.get('/me', auth, async (req, res) => {
 // Get all users (for dashboard)
 router.get('/', async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select('-otp -otpExpires');
     res.json(users);
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET /users/interactions
+// @desc    Get user's sentInterests, likedProfiles, and directChatProfiles
+// @access  Private
+router.get('/interactions', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('sentInterests likedProfiles directChatProfiles');
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.json({
+      sentInterests: (user.sentInterests || []).map(id => id.toString()),
+      likedProfiles: (user.likedProfiles || []).map(id => id.toString()),
+      directChatProfiles: (user.directChatProfiles || []).map(id => id.toString())
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /users/like/:profileId
+// @desc    Like or unlike a profile
+// @access  Private
+router.post('/like/:profileId', auth, async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Check if profile exists
+    const targetProfile = await User.findById(profileId);
+    if (!targetProfile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
+    // Check if already liked
+    const isLiked = user.likedProfiles.includes(profileId);
+    
+    if (isLiked) {
+      // Unlike
+      user.likedProfiles = user.likedProfiles.filter(id => id.toString() !== profileId);
+    } else {
+      // Like
+      user.likedProfiles.push(profileId);
+    }
+    
+    await user.save();
+    
+    res.json({
+      likedProfiles: user.likedProfiles.map(id => id.toString()),
+      isLiked: !isLiked
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /users/send-interest/:profileId
+// @desc    Send interest to a profile
+// @access  Private
+router.post('/send-interest/:profileId', auth, async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    if (!profileId || profileId === 'undefined' || profileId === 'null') {
+      return res.status(400).json({ msg: 'Invalid profileId' });
+    }
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Check if profile exists
+    const targetProfile = await User.findById(profileId);
+    if (!targetProfile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
+    // Check if already sent interest
+    if (user.sentInterests.includes(profileId)) {
+      return res.status(400).json({ msg: 'Interest already sent to this profile' });
+    }
+    
+    // Add to sent interests
+    user.sentInterests.push(profileId);
+    await user.save();
+    
+    res.json({
+      sentInterests: user.sentInterests.map(id => id.toString()),
+      message: 'Interest sent successfully'
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /users/direct-chat/:profileId
+// @desc    Add profile to direct chat (after payment)
+// @access  Private
+router.post('/direct-chat/:profileId', auth, async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    // Enforce payment amount: only allow if amount === 3000
+    const { amount } = req.body;
+    if (amount !== 3000) {
+      return res.status(400).json({ msg: 'Direct chat is only allowed for payments of 3000.' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Check if profile exists
+    const targetProfile = await User.findById(profileId);
+    if (!targetProfile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
+    // Check if already in direct chat
+    if (user.directChatProfiles.includes(profileId)) {
+      return res.status(400).json({ msg: 'Profile already in direct chat' });
+    }
+    // Add to direct chat profiles
+    user.directChatProfiles.push(profileId);
+    // Also ensure profile is in sentInterests (idempotent)
+    if (!user.sentInterests.includes(profileId)) {
+      user.sentInterests.push(profileId);
+    }
+    await user.save();
+    
+    res.json({
+      directChatProfiles: user.directChatProfiles.map(id => id.toString()),
+      message: 'Profile added to direct chat successfully'
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE /users/sent-interest/:profileId
+// @desc    Remove sent interest
+// @access  Private
+router.delete('/sent-interest/:profileId', auth, async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    
+    // Remove from sent interests
+    user.sentInterests = user.sentInterests.filter(id => id.toString() !== profileId);
+    await user.save();
+    
+    res.json({
+      sentInterests: user.sentInterests.map(id => id.toString()),
+      message: 'Interest removed successfully'
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET /users/opposite-gender
+// @desc    Get users of the opposite gender for the current user
+// @access  Private
+router.get('/opposite-gender', auth, async (req, res) => {
+  try {
+    console.log('DEBUG /users/opposite-gender req.user:', req.user);
+    console.log('DEBUG /users/opposite-gender req.user.id:', req.user && req.user.id);
+    const currentUser = await User.findById(req.user.id);
+    console.log('DEBUG /users/opposite-gender currentUser:', currentUser);
+    if (!currentUser) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    let targetGender = null;
+    if (currentUser.gender && typeof currentUser.gender === 'string') {
+      const g = currentUser.gender.toLowerCase();
+      if (g === 'male') targetGender = 'female';
+      else if (g === 'female') targetGender = 'male';
+      // Optionally, handle 'other' or custom logic here
+    }
+    if (!targetGender) {
+      return res.status(400).json({ msg: 'Current user gender not set or not supported.' });
+    }
+    const users = await User.find({ gender: new RegExp('^' + targetGender + '$', 'i') }).select('-otp -otpExpires');
+    res.json(users);
+  } catch (err) {
+    console.error('Error in /users/opposite-gender:', err);
+    res.status(500).send('Server Error');
   }
 });
 

@@ -26,6 +26,24 @@ const userSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  
+  // User interaction data - stored in MongoDB for persistence
+  sentInterests: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
+  likedProfiles: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
+  directChatProfiles: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
+  
   // Basic Personal Details
   fullName: { type: String },
   gender: { type: String, enum: ['Male', 'Female', 'Other', 'male', 'female', 'other'] },

@@ -1,18 +1,14 @@
 // src/components/Navbar.js
 import React, { useState, useRef, useEffect } from 'react';
 
-const Navbar = ({ onNavigate, onLogout, isManager = false }) => {
+const Navbar = ({ onNavigate, onLogout, isManager, unreadCount }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef();
   // Mock notifications
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: 'Your interest was accepted!', read: false },
-    { id: 2, message: 'Mediator assigned to your match.', read: false },
-    { id: 3, message: 'Profile update approved.', read: true },
-  ]);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState([]);
+  // const unreadCount = notifications.filter(n => !n.read).length; // This line is now redundant as unreadCount is passed as a prop
 
   // Close notification dropdown when clicking outside
   useEffect(() => {
@@ -28,6 +24,12 @@ const Navbar = ({ onNavigate, onLogout, isManager = false }) => {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isNotifOpen]);
+
+  // Listen for new chat messages via props or socket (if needed)
+  useEffect(() => {
+    // This effect should be updated to receive new notifications from props or socket
+    // For now, just keep notifications in state
+  }, []);
 
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen(!isProfileMenuOpen);
@@ -47,27 +49,31 @@ const Navbar = ({ onNavigate, onLogout, isManager = false }) => {
         <div className="flex items-center space-x-4 mt-2 md:mt-0">
           {/* Notification Bell */}
           <div className="relative" ref={notifRef}>
-            <button className="focus:outline-none relative" onClick={() => setIsNotifOpen((v) => !v)}>
-              <svg className="w-7 h-7 text-white hover:text-yellow-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <button className="relative" onClick={() => setIsNotifOpen((v) => !v)}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              {/* Notification count badge */}
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 font-bold border-2 border-white">{unreadCount}</span>
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full px-2 text-xs">{unreadCount}</span>
               )}
             </button>
-            {/* Notification Dropdown */}
             {isNotifOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50 py-2 max-h-96 overflow-y-auto">
-                <div className="px-4 py-2 font-semibold text-gray-800 border-b">Notifications</div>
-                {notifications.length === 0 ? (
-                  <div className="px-4 py-6 text-gray-500 text-center">No notifications</div>
-                ) : (
-                  notifications.map((notif) => (
-                    <div key={notif.id} className={`px-4 py-3 text-sm border-b last:border-b-0 ${notif.read ? 'bg-gray-50 text-gray-500' : 'bg-orange-50 text-gray-900 font-semibold'}`}>{notif.message}</div>
-                  ))
-                )}
-                <button className="block w-full text-center text-orange-600 py-2 hover:bg-orange-50 font-semibold" onClick={() => setNotifications([])}>Clear All</button>
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50 border border-gray-200">
+                <div className="p-3 border-b font-semibold text-gray-700">Notifications</div>
+                <ul className="max-h-72 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <li className="p-4 text-gray-400 text-center">No new messages</li>
+                  ) : notifications.map((notif, idx) => (
+                    <li key={idx} className="px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer flex items-center gap-2">
+                      <img src={notif.senderPhoto || '/default-profile.png'} alt="sender" className="w-8 h-8 rounded-full object-cover border" />
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-gray-800">{notif.senderName || 'Someone'}</div>
+                        <div className="text-xs text-gray-500 truncate">{notif.text || notif.preview || 'Sent a message'}</div>
+                      </div>
+                      <span className="text-xs text-gray-400 ml-2">{notif.time ? new Date(notif.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

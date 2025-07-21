@@ -24,7 +24,7 @@ const directFeatures = [
   { text: 'Budget-friendly', check: false },
 ];
 
-const PaymentModal = ({ show, onClose, profileId, onSelectPayment }) => {
+const PaymentModal = ({ show, onClose, profileId, onSelectPayment, hasSentInterest }) => {
   const navigate = useNavigate();
   if (!show) return null;
 
@@ -34,7 +34,7 @@ const PaymentModal = ({ show, onClose, profileId, onSelectPayment }) => {
       onSelectPayment(amount, profileId);
     }
     onClose();
-    navigate('/payment-methods', { state: { amount, profileId } });
+    navigate('/payment-methods', { state: { amount, profileId, hasSentInterest } });
   };
 
   // Close modal if overlay is clicked
@@ -65,17 +65,19 @@ const PaymentModal = ({ show, onClose, profileId, onSelectPayment }) => {
         <button className="close-btn" onClick={onClose}>&times;</button>
         <div className="card-modal-title">Choose your connection method</div>
         <div className="card-options-row">
-          <div className="payment-card mediator-card">
-            <div className="card-ribbon mediator-ribbon">₹199</div>
-            <div className="card-title mediator-title">Mediator</div>
-            {renderFeatures(mediatorFeatures)}
-            <button
-              className="card-select-btn mediator-btn"
-              onClick={() => handleSelect(199)}
-            >
-              SELECT
-            </button>
-          </div>
+          {!hasSentInterest && (
+            <div className="payment-card mediator-card">
+              <div className="card-ribbon mediator-ribbon">₹199</div>
+              <div className="card-title mediator-title">Mediator</div>
+              {renderFeatures(mediatorFeatures)}
+              <button
+                className="card-select-btn mediator-btn"
+                onClick={() => handleSelect(199)}
+              >
+                SELECT
+              </button>
+            </div>
+          )}
           <div className="payment-card direct-card">
             <div className="card-ribbon direct-ribbon">₹3,000</div>
             <div className="card-title direct-title">Direct Chat</div>

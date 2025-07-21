@@ -24,7 +24,44 @@ const getAge = (profile) => {
   return '';
 };
 
-const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, setLikedProfiles, directChatProfiles, setDirectChatProfiles, onNavigate }) => {
+// Add a helper for fuzzy string matching (Levenshtein distance)
+function isSimilar(a, b) {
+  if (!a || !b) return false;
+  a = a.toLowerCase();
+  b = b.toLowerCase();
+  if (a === b) return true;
+  // Simple Levenshtein distance implementation
+  const matrix = Array.from({ length: a.length + 1 }, () => []);
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  return matrix[a.length][b.length] <= 2; // Allow up to 2 edits
+}
+
+const UnifiedDashboardPage = ({ 
+  sentInterests, 
+  setSentInterests, 
+  likedProfiles, 
+  setLikedProfiles, 
+  directChatProfiles, 
+  setDirectChatProfiles, 
+  onNavigate,
+  likeProfile,
+  sendInterest,
+  addDirectChatProfile
+}) => {
   const [filters, setFilters] = useState({
     age: '',
     state: '',
@@ -50,7 +87,11 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
 
   useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:5000/users')
+    fetch('http://localhost:5000/users/opposite-gender', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
       .then(res => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -74,39 +115,50 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
   const applyFilters = () => {
     let newFilteredProfiles = allProfiles;
 
+    // Age filter
     if (filters.age) {
       newFilteredProfiles = newFilteredProfiles.filter((profile) => {
+        const age = profile.age || getAge(profile);
         const [minAge, maxAge] = filters.age.split('-').map(Number);
         if (filters.age === '36+') {
-          return profile.age >= 36;
+          return age >= 36;
         }
-        return profile.age >= minAge && profile.age <= maxAge;
+        return age >= minAge && age <= maxAge;
       });
     }
 
+    // State filter
     if (filters.state) {
       newFilteredProfiles = newFilteredProfiles.filter(
-        (profile) => profile.state === filters.state
+        (profile) => isSimilar(profile.state || profile.residingAddress?.state || '', filters.state)
       );
     }
 
+    // City filter
     if (filters.city) {
       newFilteredProfiles = newFilteredProfiles.filter(
-        (profile) => profile.city === filters.city
+        (profile) => isSimilar(profile.city || profile.residingAddress?.city || '', filters.city)
       );
     }
 
+    // Education filter
     if (filters.education) {
-      newFilteredProfiles = newFilteredProfiles.filter(
-        (profile) => profile.education === filters.education
-      );
+      newFilteredProfiles = newFilteredProfiles.filter((profile) => {
+        if (Array.isArray(profile.education)) {
+          return profile.education.some(
+            (edu) =>
+              (edu.level && isSimilar(edu.level, filters.education)) ||
+              (typeof edu === 'string' && isSimilar(edu, filters.education))
+          );
+        }
+        return isSimilar(profile.education || '', filters.education);
+      });
     }
 
-    // Height filter
+    // Height filter (unchanged)
     if (filters.height) {
       newFilteredProfiles = newFilteredProfiles.filter((profile) => {
         const height = profile.height || '';
-        // Normalize height string for comparison
         const heightInInches = (() => {
           const match = height.match(/(\d+)'(\d+)?/);
           if (!match) return 0;
@@ -129,7 +181,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
       });
     }
 
-    // Annual Income filter
+    // Annual Income filter (unchanged)
     if (filters.annualIncome) {
       newFilteredProfiles = newFilteredProfiles.filter((profile) => {
         const income = parseInt(profile.annualSalary || '0', 10);
@@ -151,7 +203,7 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
     // Family Type filter
     if (filters.familyType) {
       newFilteredProfiles = newFilteredProfiles.filter(
-        (profile) => (profile.familyType || '').toLowerCase() === filters.familyType
+        (profile) => isSimilar(profile.familyType || '', filters.familyType)
       );
     }
 
@@ -162,10 +214,10 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
     navigate(`/dashboard/profile/${profile._id ? profile._id : profile.id}`);
   };
 
-  const handleSendInterest = (profile) => {
+  const handleSendInterest = async (profile) => {
     setInterestProfile(profile);
     setShowPaymentModal(true);
-    setSentInterests((prev) => prev.includes(profile.id) ? prev : [...prev, profile.id]);
+    // Note: The actual interest sending will happen after payment in PaymentMethods
   };
 
   const handlePaymentClose = () => {
@@ -173,19 +225,28 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
     setInterestProfile(null);
   };
 
-  const toggleLike = (profileId) => {
-    setLikedProfiles((prev) =>
-      prev.includes(profileId)
-        ? prev.filter((id) => id !== profileId)
-        : [...prev, profileId]
-    );
+  const toggleLike = async (profileId) => {
+    if (likeProfile) {
+      await likeProfile(profileId);
+    } else {
+      // Fallback to local state update if API function not provided
+      setLikedProfiles((prev) =>
+        prev.includes(profileId)
+          ? prev.filter((id) => id !== profileId)
+          : [...prev, profileId]
+      );
+    }
   };
 
   // Add a handler for payment selection
-  const handleSelectPayment = (amount, profileId) => {
-    // Store the payment intent in state if needed
-    // We'll handle adding to directChatProfiles after payment success in PaymentMethods
-    // Optionally, you could set a flag here
+  const handleSelectPayment = async (amount, profileId) => {
+    if (amount === 199 && sendInterest) {
+      // Send interest after payment
+      await sendInterest(profileId);
+    } else if (amount === 3000 && addDirectChatProfile) {
+      // Add to direct chat after payment
+      await addDirectChatProfile(profileId);
+    }
   };
 
   useEffect(() => {
@@ -334,8 +395,9 @@ const UnifiedDashboardPage = ({ sentInterests, setSentInterests, likedProfiles, 
       <PaymentModal
         show={showPaymentModal}
         onClose={handlePaymentClose}
-        profileId={interestProfile ? interestProfile.id : null}
+        profileId={interestProfile ? (interestProfile._id || interestProfile.id) : null}
         onSelectPayment={handleSelectPayment}
+        hasSentInterest={interestProfile ? sentInterests.includes(interestProfile._id || interestProfile.id) : false}
       />
     </div>
   );

@@ -12,7 +12,11 @@ const EditProfilePage = () => {
   const [editableData, setEditableData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [existingPhotos, setExistingPhotos] = useState([]); // URLs from backend
+  const [newPhotos, setNewPhotos] = useState([]); // {file, preview}
+  const [unsavedNewPhotos, setUnsavedNewPhotos] = useState(false); // for draft logic
 
+  // All useEffect hooks at the top, before any early returns
   useEffect(() => {
     setLoading(true);
     // You may need to add authentication headers here
@@ -47,6 +51,9 @@ const EditProfilePage = () => {
         };
         setProfileData(safeData);
         setEditableData(safeData);
+        setExistingPhotos(safeData.photos || []);
+        setNewPhotos([]);
+        setUnsavedNewPhotos(false);
         setLoading(false);
       })
       .catch(err => {
@@ -54,6 +61,44 @@ const EditProfilePage = () => {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (isEditing) {
+      const draft = {
+        ...editableData,
+        photos: existingPhotos
+      };
+      localStorage.setItem('profileDraft', JSON.stringify(draft));
+    }
+  }, [editableData, existingPhotos, isEditing]);
+
+  useEffect(() => {
+    if (isEditing) {
+      const draft = localStorage.getItem('profileDraft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        setEditableData(parsed);
+        setExistingPhotos(parsed.photos || []);
+        setNewPhotos([]); // Can't restore files
+        setUnsavedNewPhotos(false);
+        if (parsed.photos && parsed.photos.length > 0) {
+          setModalTitle('Draft Loaded');
+          setModalMessage('A saved draft was loaded. If you had unsaved new photos, please re-upload them.');
+          setShowConfirmButton(false);
+          setIsModalOpen(true);
+        }
+      }
+    }
+  }, [isEditing]);
+
+  // Clean up blob URLs for new photo previews
+  useEffect(() => {
+    return () => {
+      newPhotos.forEach(obj => {
+        if (obj.preview) URL.revokeObjectURL(obj.preview);
+      });
+    };
+  }, [newPhotos]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -119,35 +164,67 @@ const EditProfilePage = () => {
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files || []);
-    if (editableData.photos.length + files.length > 5) {
+    if (existingPhotos.length + newPhotos.length + files.length > 5) {
       alert('You can upload a maximum of 5 photos');
       return;
     }
-    const newPhotos = [...editableData.photos, ...files.map(file => URL.createObjectURL(file))];
-    setEditableData((prev) => ({ ...prev, photos: newPhotos }));
+    const newPhotoObjs = files.map(file => ({ file, preview: URL.createObjectURL(file) }));
+    setNewPhotos(prev => [...prev, ...newPhotoObjs]);
+    setUnsavedNewPhotos(true);
   };
 
-  const removePhoto = (index) => {
-    setEditableData((prev) => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index),
-    }));
+  const removeExistingPhoto = (index) => {
+    setExistingPhotos(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      // Update draft in localStorage if editing
+      if (isEditing) {
+        const draft = {
+          ...editableData,
+          photos: updated
+        };
+        localStorage.setItem('profileDraft', JSON.stringify(draft));
+      }
+      return updated;
+    });
+  };
+
+  const removeNewPhoto = (index) => {
+    setNewPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleEdit = () => {
     setIsEditing(true);
     setEditableData({ ...profileData });
+    setExistingPhotos(profileData.photos || []);
+    setNewPhotos([]);
+    setUnsavedNewPhotos(false);
   };
 
   const handleSave = () => {
     setLoading(true);
+    const formData = new FormData();
+    // Add all fields except photos
+    Object.entries(editableData).forEach(([key, value]) => {
+      if (key !== 'photos') {
+        formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+    });
+    // Add existing photo URLs
+    existingPhotos.forEach(url => formData.append('existingPhotos[]', url));
+    // Add new photo files
+    newPhotos.forEach(obj => formData.append('photos', obj.file));
+
+    // Debug logs
+    console.log('Saving profile:');
+    console.log('existingPhotos:', existingPhotos);
+    console.log('newPhotos:', newPhotos.map(obj => obj.file.name));
+
     fetch('http://localhost:5000/users/me', {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify(editableData)
+      body: formData
     })
       .then(res => {
         if (!res.ok) throw new Error('Network response was not ok');
@@ -160,6 +237,9 @@ const EditProfilePage = () => {
         setModalMessage('Your profile has been successfully updated!');
         setShowConfirmButton(false);
         setIsModalOpen(true);
+        setExistingPhotos(data.photos || []);
+        setNewPhotos([]);
+        setUnsavedNewPhotos(false);
         setLoading(false);
       })
       .catch(err => {
@@ -247,38 +327,32 @@ const EditProfilePage = () => {
       <div className="mb-8">
         <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Profile Photos</h3>
         <div className="flex flex-wrap gap-4">
-          {Array.isArray(profileData.photos) ? profileData.photos.map((photo, index) => (
-            <div key={index} className="relative">
-              <img
-                src={getPhotoUrl(photo)}
-                alt={`Profile ${index + 1}`}
-                className="w-32 h-32 rounded-lg object-cover border-2 border-gray-300"
-              />
+          {existingPhotos.map((photo, index) => (
+            <div key={photo + index} className="relative">
+              <img src={photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo} alt="Profile" className="w-32 h-32 object-cover rounded-lg border-2 border-orange-300" />
               {isEditing && (
-                <button
-                  onClick={() => removePhoto(index)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                >
-                  ×
-                </button>
+                <button onClick={() => removeExistingPhoto(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center">&times;</button>
               )}
             </div>
-          )) : null}
-          {isEditing && (
-            <label className="cursor-pointer">
-              <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                <span className="text-gray-500">+ Add Photo</span>
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotoUpload}
-                className="hidden"
-              />
+          ))}
+          {newPhotos.map((obj, index) => (
+            <div key={obj.preview + index} className="relative">
+              <img src={obj.preview} alt="New Profile" className="w-32 h-32 object-cover rounded-lg border-2 border-green-400" />
+              {isEditing && (
+                <button onClick={() => removeNewPhoto(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center">&times;</button>
+              )}
+            </div>
+          ))}
+          {isEditing && (existingPhotos.length + newPhotos.length < 5) && (
+            <label className="w-32 h-32 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400">
+              <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoUpload} />
+              <span className="text-gray-400">+ Add Photo</span>
             </label>
           )}
         </div>
+        {unsavedNewPhotos && (
+          <div className="text-orange-600 mt-2">You have new photos that are not yet saved. Please save your profile to upload them.</div>
+        )}
       </div>
 
       {/* Basic Personal Details */}
