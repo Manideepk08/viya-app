@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ProfileDetailsModal from '../../components/dashboard/ProfileDetailsModal';
 
-const ProfileDetailsModalWrapper = () => {
+const ProfileDetailsModalWrapper = ({ onActionDone }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Get interestId from query string
+  const query = new URLSearchParams(location.search);
+  const interestId = query.get('interestId');
 
   useEffect(() => {
     fetch(`http://localhost:5000/users/${id}`)
@@ -33,6 +38,8 @@ const ProfileDetailsModalWrapper = () => {
       profile={profile}
       isOpen={true}
       onClose={() => navigate(-1)}
+      interestId={interestId}
+      onActionDone={onActionDone}
     />
   );
 };

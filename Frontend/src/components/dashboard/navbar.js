@@ -1,14 +1,13 @@
 // src/components/Navbar.js
 import React, { useState, useRef, useEffect } from 'react';
 
-const Navbar = ({ onNavigate, onLogout, isManager, unreadCount }) => {
+const Navbar = ({ onNavigate, onLogout, isManager, unreadCount, notifications = [], onNotificationClick, onAcceptInterest, onRejectInterest }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isHelpMenuOpen, setIsHelpMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef();
   // Mock notifications
-  const [notifications, setNotifications] = useState([]);
-  // const unreadCount = notifications.filter(n => !n.read).length; // This line is now redundant as unreadCount is passed as a prop
+  // const [notifications, setNotifications] = useState([]); // This line is now redundant as unreadCount is passed as a prop
 
   // Close notification dropdown when clicking outside
   useEffect(() => {
@@ -62,15 +61,31 @@ const Navbar = ({ onNavigate, onLogout, isManager, unreadCount }) => {
                 <div className="p-3 border-b font-semibold text-gray-700">Notifications</div>
                 <ul className="max-h-72 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <li className="p-4 text-gray-400 text-center">No new messages</li>
+                    <li className="p-4 text-gray-400 text-center">No new notifications</li>
                   ) : notifications.map((notif, idx) => (
-                    <li key={idx} className="px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer flex items-center gap-2">
-                      <img src={notif.senderPhoto || '/default-profile.png'} alt="sender" className="w-8 h-8 rounded-full object-cover border" />
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm text-gray-800">{notif.senderName || 'Someone'}</div>
-                        <div className="text-xs text-gray-500 truncate">{notif.text || notif.preview || 'Sent a message'}</div>
+                    <li key={notif._id || idx} className="px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-orange-100 flex flex-col gap-2">
+                      <div className="flex items-center gap-2" onClick={() => { console.log('Notification clicked:', notif); onNotificationClick && onNotificationClick(notif); }}>
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm text-gray-800">{notif.title}</div>
+                          <div className="text-xs text-gray-500 truncate">{notif.message}</div>
+                          <div className="text-xs text-gray-400 mt-1">{notif.createdAt ? new Date(notif.createdAt).toLocaleString() : ''}</div>
+                        </div>
                       </div>
-                      <span className="text-xs text-gray-400 ml-2">{notif.time ? new Date(notif.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      {/* Accept/Reject for interest notifications */}
+                      {notif.title === 'New Interest Received' && notif.interestId && (
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold"
+                            disabled={notif.loadingAccept}
+                            onClick={e => { e.stopPropagation(); onAcceptInterest && onAcceptInterest(notif); }}
+                          >{notif.loadingAccept ? 'Accepting...' : 'Accept'}</button>
+                          <button
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold"
+                            disabled={notif.loadingReject}
+                            onClick={e => { e.stopPropagation(); onRejectInterest && onRejectInterest(notif); }}
+                          >{notif.loadingReject ? 'Rejecting...' : 'Reject'}</button>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const PaymentMethods = () => {
   const [selected, setSelected] = useState(null); // 'upi', 'credit', 'debit'
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [error, setError] = useState('');
   const location = useLocation();
   const amount = location.state?.amount;
   const profileId = location.state?.profileId;
@@ -17,18 +18,27 @@ const PaymentMethods = () => {
   const handlePaymentSuccess = async () => {
     const token = localStorage.getItem('token');
     let success = true;
-
+    let errorMessage = '';
+    
     try {
       if (amount === 199 && profileId && !hasSentInterest) {
         // Only add to sentInterests for 199 payment if not already sent
-        const res = await fetch(`http://localhost:5000/users/send-interest/${profileId}`, {
+        const res = await fetch(`http://localhost:5000/users/interests/${profileId}`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentAmount: 199 })
         });
-        if (!res.ok) success = false;
+        
+        if (!res.ok) {
+          const data = await res.json();
+          errorMessage = data.msg || 'Failed to send interest';
+          success = false;
+          console.error('Interest error:', data);
+        }
       }
+      
       if (amount === 3000 && profileId) {
-        // Always add to directChatProfiles for 3000 payment
+        // Try direct chat first
         const res1 = await fetch(`http://localhost:5000/users/direct-chat/${profileId}`, {
           method: 'POST',
           headers: {
@@ -37,24 +47,41 @@ const PaymentMethods = () => {
           },
           body: JSON.stringify({ amount: 3000 })
         });
-        // Only add to sentInterests if not already sent
-        let res2 = { ok: true };
-        if (!hasSentInterest) {
-          res2 = await fetch(`http://localhost:5000/users/send-interest/${profileId}`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` }
-          });
+        
+        const data1 = await res1.json();
+        if (!res1.ok) {
+          errorMessage = data1.msg || 'Failed to enable direct chat';
+          success = false;
+          console.error('Direct chat error:', data1);
         }
-        if (!res1.ok || !res2.ok) success = false;
+
+        // Only add to sentInterests if not already sent
+        if (!hasSentInterest) {
+          const res2 = await fetch(`http://localhost:5000/users/interests/${profileId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentAmount: 3000 })
+          });
+          
+          if (!res2.ok) {
+            const data2 = await res2.json();
+            if (errorMessage) errorMessage += ' and ';
+            errorMessage += data2.msg || 'Failed to send interest';
+            success = false;
+            console.error('Interest error:', data2);
+          }
+        }
       }
     } catch (err) {
       success = false;
+      errorMessage = 'An unexpected error occurred';
+      console.error('Payment error:', err);
     }
-
     if (success) {
       setPaymentSuccess(true);
+      setError('');
     } else {
-      alert('There was a problem updating your interest. Please try again.');
+      setError(errorMessage || 'There was a problem processing your payment. Please try again.');
     }
   };
 
@@ -71,6 +98,18 @@ const PaymentMethods = () => {
   return (
     <div style={{ minHeight: '100vh', background: '#fdeeee', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 16px rgba(0,0,0,0.07)', padding: 32, minWidth: 340, maxWidth: 500, width: '100%', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {error && (
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#fee2e2', 
+            color: '#ef4444', 
+            borderRadius: '8px',
+            marginBottom: '12px',
+            fontSize: '14px'
+          }}>
+            {error}
+          </div>
+        )}
         {/* Payment method selection row */}
         {!selected && !paymentSuccess && (
           <div style={{ display: 'flex', flexDirection: 'row', gap: 18, justifyContent: 'center', marginBottom: 8 }}>

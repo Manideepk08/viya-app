@@ -4,8 +4,9 @@ import ProfileDetailsModal from '../../components/dashboard/ProfileDetailsModal'
 import NotificationBanner from '../../components/NotificationBanner';
 import PaymentModal from '../payments-FAQ/PaymentModal';
 import axios from 'axios';
-import EmojiPicker from 'emoji-picker-react';
+import Picker from '@emoji-mart/react';
 import io from 'socket.io-client';
+import { FaLock, FaInfoCircle, FaRupeeSign } from 'react-icons/fa';
 
 const getPhotoUrl = (photo) => {
   if (!photo) return '/default-profile.png';
@@ -13,6 +14,7 @@ const getPhotoUrl = (photo) => {
 };
 
 const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles = [], onNavigate = (path) => {} }) => {
+  const userId = localStorage.getItem('userId');
   const [activeTab, setActiveTab] = useState('sent');
   const [chatProfile, setChatProfile] = useState(() => {
     const saved = localStorage.getItem('chatProfile');
@@ -43,26 +45,105 @@ const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles 
   const [otherViewing, setOtherViewing] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const [chatLockedMsg, setChatLockedMsg] = useState('');
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [showActionToast, setShowActionToast] = useState(false);
+  const [actionToastMsg, setActionToastMsg] = useState('');
 
-  const userId = localStorage.getItem('userId');
+  // Chat unlock logic: Only allow chat if both users have accepted and at least one interest has paymentAmount 3000
+  const [canChat, setCanChat] = useState(false);
+  useEffect(() => {
+    const checkChatUnlock = async () => {
+      if (!chatProfile || !userId) {
+        setCanChat(false);
+        setChatLockedMsg('');
+        return;
+      }
+      try {
+        const token = localStorage.getItem('token');
+        // Get all interests between the two users
+        const [myInterestRes, theirInterestRes] = await Promise.all([
+          axios.get(`http://localhost:5000/interests/incoming`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`http://localhost:5000/interests/sent`, { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        // My incoming: from them to me, Their sent: from me to them
+        const incoming = myInterestRes.data.filter(i => String(i.from._id || i.from) === String(chatProfile._id));
+        const sent = theirInterestRes.data.filter(i => String(i.to._id || i.to) === String(chatProfile._id));
+        const all = [...incoming, ...sent];
+        const bothAccepted = all.filter(i => i.status === 'accepted').length === 2;
+        const has3000 = all.some(i => i.status === 'accepted' && i.paymentAmount === 3000);
+        setCanChat(bothAccepted && has3000);
+        if (!(bothAccepted && has3000)) {
+          setChatLockedMsg('Chat is locked. Both users must accept and at least one must pay ₹3000 to unlock chat.');
+        } else {
+          setChatLockedMsg('');
+        }
+      } catch (err) {
+        setCanChat(false);
+        setChatLockedMsg('Chat is locked. Both users must accept and at least one must pay ₹3000 to unlock chat.');
+      }
+    };
+    checkChatUnlock();
+  }, [chatProfile, userId]);
+
   const socketRef = useRef();
 
   useEffect(() => {
-    setLoading(true);
-    fetch('http://localhost:5000/users')
-      .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok');
-        return res.json();
-      })
-      .then(data => {
+    const fetchProfiles = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Handle unauthorized
+            localStorage.removeItem('token');
+            onNavigate('/login');
+            throw new Error('Please login again');
+          }
+          throw new Error(`Server returned ${response.status}`);
+        }
+        
+        const data = await response.json();
         setAllProfiles(data);
+        setError(null); // Clear any previous errors
+      } catch (err) {
+        console.error('Failed to fetch profiles:', err);
+        setError('Failed to load profiles. Please try again.');
+        setAllProfiles([]); // Clear profiles on error
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        setError('Failed to fetch profiles');
-        setLoading(false);
-      });
-  }, []);
+      }
+    };
+
+    fetchProfiles();
+  }, [onNavigate]);
+
+  // Ensure all sentInterests profiles are loaded
+  useEffect(() => {
+    const fetchMissingProfiles = async () => {
+      for (const id of sentInterests) {
+        if (!allProfiles.some(p => String(p._id) === String(id))) {
+          try {
+            const userRes = await axios.get(`http://localhost:5000/users/${id}`);
+            setAllProfiles(prev => {
+              if (prev.some(p => String(p._id) === String(id))) return prev;
+              return [...prev, userRes.data];
+            });
+          } catch (err) {}
+        }
+      }
+    };
+    if (sentInterests && sentInterests.length > 0) {
+      fetchMissingProfiles();
+    }
+  }, [sentInterests]);
 
   useEffect(() => {
     // Connect to Socket.IO server
@@ -149,8 +230,15 @@ useEffect(() => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setChatMessages(res.data || []);
+      setChatLockedMsg('');
     } catch (err) {
-      setChatMessages([]);
+      if (err.response && err.response.status === 403 && err.response.data && err.response.data.msg) {
+        setChatMessages(null);
+        setChatLockedMsg(err.response.data.msg);
+      } else {
+        setChatMessages([]);
+        setChatLockedMsg('');
+      }
     }
   };
   const handleCloseChat = () => {
@@ -224,8 +312,8 @@ useEffect(() => {
     setUpgradeProfile(null);
   };
 
-  const handleEmojiClick = (emojiData, event) => {
-    setChatInput(chatInput + emojiData.emoji);
+  const handleEmojiClick = (emojiData) => {
+    setChatInput(chatInput + emojiData.native);
     setShowEmojiPicker(false);
   };
 
@@ -295,6 +383,38 @@ useEffect(() => {
     } catch (err) {}
   };
 
+  // Helper to check if chat is locked (based on chatLockedMsg)
+  const isChatLocked = !!chatLockedMsg;
+
+  // Accept/Reject handlers (to show toast)
+  const handleAcceptInterest = async (interestId) => {
+    // ... call backend to accept ...
+    setActionToastMsg('Interest accepted!');
+    setShowActionToast(true);
+    // After accepting, fetch sentInterests and ensure all profiles are loaded
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/users/interactions', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const newSentInterests = res.data.sentInterests || [];
+      // For any new sent interest not in allProfiles, fetch and add
+      for (const id of newSentInterests) {
+        if (!allProfiles.some(p => String(p._id) === String(id))) {
+          const userRes = await axios.get(`http://localhost:5000/users/${id}`);
+          setAllProfiles(prev => [...prev, userRes.data]);
+        }
+      }
+    } catch (err) {}
+    setTimeout(() => setShowActionToast(false), 2500);
+  };
+  const handleRejectInterest = async (interestId) => {
+    // ... call backend to reject ...
+    setActionToastMsg('Interest rejected.');
+    setShowActionToast(true);
+    setTimeout(() => setShowActionToast(false), 2500);
+  };
+
   const renderProfiles = (profiles, emptyMsg, showChat = false) => {
     if (allProfiles.length === 0) {
       return <div className="text-gray-500 text-center py-8">No profiles available.</div>;
@@ -316,10 +436,12 @@ useEffect(() => {
                   <div className="font-bold text-lg text-gray-800">{profile.name}</div>
                   <div className="text-gray-500">{profile.age} yrs, {profile.city}, {profile.state}</div>
                 </div>
-                {hasDirectChat ? (
+                            {hasDirectChat && canChat ? (
                   <button
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold ml-4"
                     onClick={() => handleOpenChat(profile)}
+                    disabled={isChatLocked}
+                    title={isChatLocked ? 'Chat is locked until both accept and pay ₹3000' : ''}
                   >
                     Chat
                   </button>
@@ -404,113 +526,135 @@ useEffect(() => {
                   <button className="text-white text-2xl font-bold hover:text-indigo-200 transition" onClick={handleCloseChat} title="Close">&times;</button>
                 </div>
               </div>
-              {/* Messages Area */}
-              <div className="flex-1 p-5 overflow-y-auto bg-gradient-to-br from-gray-50 to-white" style={{ minHeight: 0, maxHeight: 340 }}>
-                {chatMessages.length === 0 ? (
-                  <div className="text-gray-400 flex items-center justify-center h-full">No messages yet.</div>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {chatMessages.map((msg, idx) => {
-                      const isMe = msg.sender === userId || (msg.sender && msg.sender._id === userId);
-                      return (
-                        <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end group`}>
-                          {!isMe && (
-                            <img
-                              src={getPhotoUrl(chatProfile.photos && chatProfile.photos[0])}
-                              alt={chatProfile.name}
-                              className="w-7 h-7 rounded-full object-cover border-2 border-orange-200 mr-2 self-end shadow"
-                            />
-                          )}
-                          <div className={`rounded-2xl px-4 py-2 max-w-[70%] text-sm shadow-lg ${isMe ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'} transition-all duration-150 relative`} style={{ wordBreak: 'break-word' }}>
-                            {editingMsgId === msg._id ? (
-                              <div className="flex items-center gap-2">
-                                <input className="border rounded px-2 py-1 text-black" value={editingText} onChange={e => setEditingText(e.target.value)} />
-                                <button className="text-green-600 text-xs" onClick={() => handleSaveEdit(msg)}>Save</button>
-                                <button className="text-gray-400 text-xs" onClick={() => setEditingMsgId(null)}>Cancel</button>
-                              </div>
-                            ) : (
-                              <>
-                                {msg.fileUrl ? (
-                                  msg.fileType === 'image' ? (
-                                    <img src={`http://localhost:5000${msg.fileUrl}`} alt="attachment" className="max-w-[180px] max-h-[180px] rounded-lg mb-1" />
-                                  ) : (
-                                    <a href={`http://localhost:5000${msg.fileUrl}`} target="_blank" rel="noopener noreferrer" className="underline text-blue-200 block mb-1">Download file</a>
-                                  )
-                                ) : null}
-                                {msg.text}
-                                {/* Edit/Delete icons for own messages */}
-                                {isMe && (
-                                  <span className="absolute top-1 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                                    <button className="text-xs text-yellow-200 hover:text-yellow-400" onClick={() => handleEditMessage(msg)} title="Edit">✏️</button>
-                                    <button className="text-xs text-red-200 hover:text-red-400" onClick={() => handleDeleteMessage(msg)} title="Delete">🗑️</button>
-                                  </span>
-                                )}
-                              </>
-                            )}
-                            <div className="flex items-center gap-1 mt-1">
-  {msg.read ? (
-    <span className="text-blue-500">✓✓</span>
-  ) : msg.delivered ? (
-    <span className="text-gray-500">✓✓</span>
-  ) : (
-    <span className="text-gray-400">✓</span>
-  )}
-  <span className="text-xs text-right opacity-70">{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {otherTyping && <TypingDots />}
-                  </div>
-                )}
-              </div>
-              {/* Input Area */}
-              <div className="p-4 border-t bg-white flex gap-2 items-center relative">
-                <button
-                  className="text-2xl px-2 focus:outline-none hover:bg-gray-100 rounded-full transition"
-                  onClick={() => setShowEmojiPicker((v) => !v)}
-                  title="Add emoji"
-                  type="button"
-                >
-                  😊
-                </button>
-                <label className="text-2xl px-2 cursor-pointer hover:bg-gray-100 rounded-full transition" title="Attach file">
-                  <input type="file" className="hidden" onChange={handleFileChange} disabled={fileUploading} />
-                  <span role="img" aria-label="Attach">📎</span>
-                </label>
-                {fileUploading && <span className="text-xs text-blue-500">Uploading...</span>}
-                {showEmojiPicker && (
-                  <div className="absolute bottom-14 left-0 z-50">
-                    <EmojiPicker onEmojiClick={handleEmojiClick} theme="light" />
-                  </div>
-                )}
-                {filePreview && (
-                  <div className="mb-2 flex items-center gap-2">
-                    {typeof filePreview === 'string' && filePreview.startsWith('data:') ? (
-                      <img src={filePreview} alt="preview" className="max-w-[120px] max-h-[120px] rounded-lg border" />
+              {/* Chat Lock Message or Messages Area */}
+              {!canChat ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                  <FaLock size={48} className="text-orange-400 mb-4" />
+                  <div className="text-orange-600 font-semibold text-lg mb-2">Chat Locked</div>
+                  <div className="text-gray-700 mb-4">Both users must accept and at least one must pay <FaRupeeSign className="inline" />3000 to unlock chat.</div>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 mb-2" onClick={() => setShowUnlockModal(true)}>
+                    <FaInfoCircle /> How to Unlock
+                  </button>
+                  {/* If only 199 was paid, show upgrade button */}
+                  {/* You may need to check payment status from interests */}
+                  <button className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg shadow hover:bg-orange-600" onClick={() => handleUpgradeToDirectChat(chatProfile)}>
+                    <FaRupeeSign /> Upgrade to ₹3000
+                  </button>
+                </div>
+              ) : chatMessages !== null ? (
+                <>
+                  {/* Messages Area */}
+                  <div className="flex-1 p-5 overflow-y-auto bg-gradient-to-br from-gray-50 to-white" style={{ minHeight: 0, maxHeight: 340 }}>
+                    {chatMessages.length === 0 ? (
+                      <div className="text-gray-400 flex items-center justify-center h-full">No messages yet.</div>
                     ) : (
-                      <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">{filePreview}</span>
+                      <div className="flex flex-col gap-3">
+                        {chatMessages.map((msg, idx) => {
+                          const isMe = msg.sender === userId || (msg.sender && msg.sender._id === userId);
+                          return (
+                            <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end group`}>
+                              {!isMe && (
+                                <img
+                                  src={getPhotoUrl(chatProfile.photos && chatProfile.photos[0])}
+                                  alt={chatProfile.name}
+                                  className="w-7 h-7 rounded-full object-cover border-2 border-orange-200 mr-2 self-end shadow"
+                                />
+                              )}
+                              <div className={`rounded-2xl px-4 py-2 max-w-[70%] text-sm shadow-lg ${isMe ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'} transition-all duration-150 relative`} style={{ wordBreak: 'break-word' }}>
+                                {editingMsgId === msg._id ? (
+                                  <div className="flex items-center gap-2">
+                                    <input className="border rounded px-2 py-1 text-black" value={editingText} onChange={e => setEditingText(e.target.value)} />
+                                    <button className="text-green-600 text-xs" onClick={() => handleSaveEdit(msg)}>Save</button>
+                                    <button className="text-gray-400 text-xs" onClick={() => setEditingMsgId(null)}>Cancel</button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {msg.fileUrl ? (
+                                      msg.fileType === 'image' ? (
+                                        <img src={`http://localhost:5000${msg.fileUrl}`} alt="attachment" className="max-w-[180px] max-h-[180px] rounded-lg mb-1" />
+                                      ) : (
+                                        <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">{msg.fileUrl}</span>
+                                      )
+                                    ) : null}
+                                    <span>{msg.text}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
-                    <button className="ml-2 text-red-500 text-xs" onClick={() => setFilePreview(null)}>Remove</button>
                   </div>
-                )}
-                <input
-                  className="flex-1 border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition shadow-sm"
-                  placeholder="Type a message..."
-                  value={chatInput}
-                  onChange={handleInputChange}
-                  onKeyDown={handleInputKeyDown}
-                  autoFocus
-                />
-                <button
-                  className={`bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-2 rounded-2xl font-semibold shadow-md transition hover:from-blue-600 hover:to-indigo-600 ${!chatInput.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  onClick={handleSendMessage}
-                  disabled={!chatInput.trim()}
-                >
-                  Send
-                </button>
-              </div>
+                  {/* Input Area */}
+                  <div className="p-4 border-t bg-white flex gap-2 items-center relative">
+                    <button
+                      className="text-2xl px-2 focus:outline-none hover:bg-gray-100 rounded-full transition"
+                      onClick={() => setShowEmojiPicker((v) => !v)}
+                      title="Add emoji"
+                      type="button"
+                    >
+                      😊
+                    </button>
+                    <label className="text-2xl px-2 cursor-pointer hover:bg-gray-100 rounded-full transition" title="Attach file">
+                      <input type="file" className="hidden" onChange={handleFileChange} disabled={fileUploading} />
+                      <span role="img" aria-label="Attach">📎</span>
+                    </label>
+                    {fileUploading && <span className="text-xs text-blue-500">Uploading...</span>}
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-14 left-0 z-50">
+                        <Picker onEmojiSelect={handleEmojiClick} theme="light" />
+                      </div>
+                    )}
+                    {filePreview && (
+                      <div className="mb-2 flex items-center gap-2">
+                        {typeof filePreview === 'string' && filePreview.startsWith('data:') ? (
+                          <img src={filePreview} alt="preview" className="max-w-[120px] max-h-[120px] rounded-lg border" />
+                        ) : (
+                          <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">{filePreview}</span>
+                        )}
+                        <button className="ml-2 text-red-500 text-xs" onClick={() => setFilePreview(null)}>Remove</button>
+                      </div>
+                    )}
+                    <input
+                      className="flex-1 border border-gray-300 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition shadow-sm"
+                      placeholder="Type a message..."
+                      value={chatInput}
+                      onChange={handleInputChange}
+                      onKeyDown={handleInputKeyDown}
+                      autoFocus
+                    />
+                    <button
+                      className={`bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-2 rounded-2xl font-semibold shadow-md transition hover:from-blue-600 hover:to-indigo-600 ${!chatInput.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      onClick={handleSendMessage}
+                      disabled={!chatInput.trim()}
+                    >
+                      Send
+                    </button>
+                  </div>
+                </>
+              ) : null}
+              {/* Unlock Modal */}
+              {showUnlockModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                    <h2 className="text-xl font-bold mb-4">How to Unlock Chat</h2>
+                    <ol className="text-left mb-4 list-decimal list-inside">
+                      <li>Send an interest and pay <FaRupeeSign className="inline" />199 or <FaRupeeSign className="inline" />3000.</li>
+                      <li>Wait for the other user to accept your interest.</li>
+                      <li>If only <FaRupeeSign className="inline" />199 was paid, upgrade to <FaRupeeSign className="inline" />3000 for chat access.</li>
+                      <li>Once both have accepted and at least one has paid <FaRupeeSign className="inline" />3000, chat will unlock automatically.</li>
+                    </ol>
+                    <button className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onClick={() => setShowUnlockModal(false)}>Close</button>
+                  </div>
+                </div>
+              )}
+              {/* Action Toast */}
+              {showActionToast && (
+                <div className="fixed bottom-24 right-8 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
+                  {actionToastMsg}
+                </div>
+              )}
             </div>
           )}
           {/* Minimized Chat Floating Button */}

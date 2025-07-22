@@ -1,14 +1,36 @@
 // src/components/ProfileDetailsModal.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from './button.js'; // Import Button for use within Modal
 import Modal from './modal.js'; // Import Modal for the nested confirmation
 import PaymentModal from '../../pages/payments-FAQ/PaymentModal.js';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
+const ProfileDetailsModal = ({ profile, isOpen, onClose, interestId, onActionDone }) => {
   const [mediaIndex, setMediaIndex] = useState(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [loadingAccept, setLoadingAccept] = useState(false);
+  const [loadingReject, setLoadingReject] = useState(false);
+  const [actionMsg, setActionMsg] = useState('');
+  const [actionDone, setActionDone] = useState(false);
+  const [interestStatus, setInterestStatus] = useState('pending');
   const navigate = useNavigate();
+
+  // Fetch interest status on mount if interestId is present
+  useEffect(() => {
+    if (!interestId) return;
+    axios.get(`http://localhost:5000/interests/${interestId}`)
+      .then(res => {
+        setInterestStatus(res.data.status || 'pending');
+      })
+      .catch((err) => {
+        if (err.response && err.response.status === 404) {
+          setInterestStatus('notfound');
+        } else {
+          setInterestStatus('pending');
+        }
+      });
+  }, [interestId]);
 
   if (!isOpen || !profile) return null;
 
@@ -27,9 +49,62 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
     onClose();
   };
 
+  // Accept/Reject handlers
+  const handleAccept = async () => {
+    if (!interestId) return;
+    setLoadingAccept(true);
+    try {
+      await axios.post(`http://localhost:5000/users/interests/${interestId}/accept`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setActionMsg('Interest accepted!');
+      setActionDone(true);
+      setInterestStatus('accepted');
+      if (onActionDone) onActionDone();
+      setTimeout(() => { setActionMsg(''); onClose(); }, 1500);
+    } catch (err) {
+      setActionMsg('Failed to accept interest.');
+      setTimeout(() => setActionMsg(''), 2000);
+    } finally {
+      setLoadingAccept(false);
+    }
+  };
+  const handleReject = async () => {
+    if (!interestId) return;
+    setLoadingReject(true);
+    try {
+      await axios.post(`http://localhost:5000/users/interests/${interestId}/reject`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setActionMsg('Interest rejected.');
+      setActionDone(true);
+      setInterestStatus('rejected');
+      if (onActionDone) onActionDone();
+      setTimeout(() => { setActionMsg(''); onClose(); }, 1500);
+    } catch (err) {
+      setActionMsg('Failed to reject interest.');
+      setTimeout(() => setActionMsg(''), 2000);
+    } finally {
+      setLoadingReject(false);
+    }
+  };
+
   const getPhotoUrl = (photo) => {
     if (!photo) return '/default-profile.png';
     return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
+  };
+
+  // Helper to calculate age from date of birth
+  const getAge = (dob) => {
+    if (!dob) return 'N/A';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   // Helper for displaying a field
@@ -57,6 +132,25 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 overflow-y-auto">
       <div className="bg-[#fffaf5] w-full h-full p-0 m-0 relative flex flex-col">
+        {/* Accept/Reject for interestId */}
+        {interestId && !actionDone && interestStatus === 'pending' && (
+          <div className="absolute top-6 left-8 z-50 flex gap-3">
+            <button
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold text-base"
+              disabled={loadingAccept}
+              onClick={handleAccept}
+            >{loadingAccept ? 'Accepting...' : 'Accept'}</button>
+            <button
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded font-semibold text-base"
+              disabled={loadingReject}
+              onClick={handleReject}
+            >{loadingReject ? 'Rejecting...' : 'Reject'}</button>
+            {actionMsg && <span className="ml-4 text-orange-700 font-semibold">{actionMsg}</span>}
+          </div>
+        )}
+        {interestId && interestStatus === 'notfound' && (
+          <div className="absolute top-6 left-8 z-50 text-orange-700 font-semibold bg-white px-4 py-2 rounded shadow">This interest request is no longer available.</div>
+        )}
         {/* Close button */}
         <button
           onClick={handleClose}
@@ -74,14 +168,14 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
                     <video
                       src={media[mediaIndex]}
                       controls
-                      className="w-72 h-72 rounded-2xl object-cover border-4 border-orange-200 shadow-lg bg-black"
+                      className="w-[350px] h-[350px] rounded-2xl object-contain border-4 border-orange-200 shadow-lg bg-black"
                     />
                   ) : (
                     <img
                       src={getPhotoUrl(media[mediaIndex])}
                       alt={`Profile media ${mediaIndex + 1}`}
-                      className="w-72 h-72 rounded-2xl object-cover border-4 border-orange-200 shadow-lg"
-                      onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/300x300/9CA3AF/ffffff?text=N/A'; }}
+                      className="w-[350px] h-[350px] rounded-2xl object-contain border-4 border-orange-200 shadow-lg"
+                      onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/350x350/9CA3AF/ffffff?text=N/A'; }}
                     />
                   )}
                   {media.length > 1 && (
@@ -123,7 +217,7 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
                 <span className="bg-green-500 text-white px-4 py-1 rounded-full text-base font-semibold flex items-center"><svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Verified</span>
               )}
             </div>
-            <div className="text-2xl text-orange-500 font-semibold mb-4">{profile.age} years old</div>
+            <div className="text-2xl text-orange-500 font-semibold mb-4">{(profile.age && profile.age !== 'N/A') ? profile.age : getAge(profile.dob)} years old</div>
             {/* Basic Personal Details */}
             <div className="bg-orange-50 rounded-xl p-5 mb-6 shadow-sm">
               <h4 className="text-lg font-bold text-orange-700 mb-3 border-b border-orange-200 pb-1">Basic Personal Details</h4>
@@ -196,7 +290,7 @@ const ProfileDetailsModal = ({ profile, isOpen, onClose }) => {
           </div>
         </div>
         {/* Payment Modal Overlay */}
-        <PaymentModal show={showPaymentModal} onClose={handlePaymentClose} amount={199} />
+        <PaymentModal show={showPaymentModal} onClose={handlePaymentClose} profileId={profile._id || profile.id} />
       </div>
     </div>
   );

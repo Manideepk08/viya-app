@@ -24,15 +24,12 @@ const directFeatures = [
   { text: 'Budget-friendly', check: false },
 ];
 
-const PaymentModal = ({ show, onClose, profileId, onSelectPayment, hasSentInterest }) => {
+const PaymentModal = ({ show, onClose, profileId, hasSentInterest }) => {
   const navigate = useNavigate();
   if (!show) return null;
 
-  // On select, call onSelectPayment and navigate to payment methods page with amount and profileId
+  // On select, only navigate to payment methods page with amount and profileId
   const handleSelect = (amount) => {
-    if (onSelectPayment) {
-      onSelectPayment(amount, profileId);
-    }
     onClose();
     navigate('/payment-methods', { state: { amount, profileId, hasSentInterest } });
   };

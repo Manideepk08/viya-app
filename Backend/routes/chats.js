@@ -5,6 +5,7 @@ const User = require('../models/user.model');
 const auth = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
+const Interest = require('../models/interest.model');
 
 // Multer config for file uploads
 const storage = multer.diskStorage({
@@ -24,6 +25,12 @@ router.get('/:profileId', auth, async (req, res) => {
     const profileId = req.params.profileId;
     if (!mongoose.Types.ObjectId.isValid(profileId)) {
       return res.status(400).json({ msg: 'Invalid profileId' });
+    }
+    // Check mutual acceptance and payment
+    const myInterest = await Interest.findOne({ from: userId, to: profileId, status: 'accepted' });
+    const theirInterest = await Interest.findOne({ from: profileId, to: userId, status: 'accepted' });
+    if (!myInterest || !theirInterest || (myInterest.paymentAmount !== 3000 && theirInterest.paymentAmount !== 3000)) {
+      return res.status(403).json({ msg: 'Chat is only available after mutual acceptance and 3000 payment.' });
     }
     const chat = await Chat.findOne({
       participants: { $all: [userId, profileId] }
@@ -46,6 +53,12 @@ router.post('/:profileId/message', auth, async (req, res) => {
     }
     if (!mongoose.Types.ObjectId.isValid(profileId)) {
       return res.status(400).json({ msg: 'Invalid profileId' });
+    }
+    // Check mutual acceptance and payment
+    const myInterest = await Interest.findOne({ from: userId, to: profileId, status: 'accepted' });
+    const theirInterest = await Interest.findOne({ from: profileId, to: userId, status: 'accepted' });
+    if (!myInterest || !theirInterest || (myInterest.paymentAmount !== 3000 && theirInterest.paymentAmount !== 3000)) {
+      return res.status(403).json({ msg: 'Chat is only available after mutual acceptance and 3000 payment.' });
     }
     let chat = await Chat.findOne({
       participants: { $all: [userId, profileId] }

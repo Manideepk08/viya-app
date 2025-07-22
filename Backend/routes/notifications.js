@@ -32,7 +32,10 @@ router.post('/send', async (req, res) => {
 router.get('/for/:userId', async (req, res) => {
   const { userId } = req.params;
   console.log('Fetching notifications for userId:', userId);
-  const notifications = await Notification.find({ recipients: userId }).sort({ createdAt: -1 });
+  const notifications = await Notification.find({ 
+    recipients: userId,
+    status: { $ne: 'actioned' }  // Don't show actioned notifications
+  }).sort({ createdAt: -1 });
   console.log('Notifications found:', notifications);
   res.json(notifications);
 });

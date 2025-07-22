@@ -31,6 +31,8 @@ function App() {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const openChatIdRef = useRef(null); // Track currently open chat
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Load user interactions from MongoDB
   const loadUserInteractions = async () => {
@@ -62,7 +64,7 @@ function App() {
         console.log('Migrating sentInterests from localStorage to MongoDB...');
         for (const profileId of storedSentInterests) {
           try {
-            await axios.post(`http://localhost:5000/users/send-interest/${profileId}`, {}, {
+            await axios.post(`http://localhost:5000/users/interests/${profileId}`, { paymentAmount: 199 }, {
               headers: { Authorization: `Bearer ${token}` }
             });
           } catch (error) {
@@ -144,6 +146,18 @@ function App() {
     }
   };
 
+  // Fetch notifications for the logged-in user
+  const fetchNotifications = async () => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+    try {
+      const res = await axios.get(`http://localhost:5000/notifications/for/${userId}`);
+      setNotifications(res.data);
+    } catch (err) {
+      setNotifications([]);
+    }
+  };
+
   useEffect(() => {
     // Check for token in local storage on app load
     const token = localStorage.getItem('token');
@@ -156,19 +170,23 @@ function App() {
     }
   }, []);
 
+  // Fetch notifications on login
+  useEffect(() => {
+    if (isLoggedIn) fetchNotifications();
+  }, [isLoggedIn]);
+
+  // Socket.io notification listener
   useEffect(() => {
     const userId = localStorage.getItem('userId');
     const socket = io('http://localhost:5000');
     if (userId) {
       socket.emit('join', userId);
     }
-    socket.on('chat:newMessage', ({ chatId, message, from, to }) => {
-      if (from !== userId && !isChatOpen(chatId)) {
-        setUnreadCount((c) => c + 1);
-        setToastMsg(`New message from ${message.senderName || 'someone'}`);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
-      }
+    socket.on('notification:new', (data) => {
+      setToastMsg(data.message);
+      setShowToast(true);
+      fetchNotifications(); // Refresh notifications
+      setTimeout(() => setShowToast(false), 4000);
     });
     return () => { socket.disconnect(); };
   }, []);
@@ -196,19 +214,17 @@ function App() {
     }
   };
 
-  const sendInterest = async (profileId: string) => {
+  // Update sendInterest to use new endpoint
+  const sendInterest = async (profileId: string, paymentAmount: number = 199) => {
     try {
-      const response = await axios.post(`http://localhost:5000/users/send-interest/${profileId}`, {}, {
+      const response = await axios.post(`http://localhost:5000/users/interests/${profileId}`, { paymentAmount }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setSentInterests(response.data.sentInterests);
+      // Optionally update sentInterests from /users/interactions
+      loadUserInteractions();
       return true;
     } catch (error) {
       console.error('Failed to send interest:', error);
-      // Fallback to local state update
-      if (!sentInterests.includes(profileId)) {
-        setSentInterests(prev => [...prev, profileId]);
-      }
       return false;
     }
   };
@@ -257,12 +273,86 @@ function App() {
     navigate('/manager');
   };
 
+  // Calculate unread notifications (optionally, filter by read status if available)
+  const unreadNotifications = notifications.length; // You can refine this if you add a 'read' field
+
+  // Notification click handler
+  const handleNotificationClick = (notif: any) => {
+    if (notif.title === 'New Interest Received' && notif.from && notif.interestId) {
+      navigate(`/dashboard/profile/${notif.from}?interestId=${notif.interestId}`);
+    } else if (notif.title === 'New Interest Received' && notif.from) {
+      navigate(`/dashboard/profile/${notif.from}`);
+    }
+    // Optionally, mark as read or handle other notification types
+  };
+
+  // Accept/Reject handlers for interest notifications
+  const [notifLoading, setNotifLoading] = useState<Record<string, boolean>>({});
+
+  const handleAcceptInterest = async (notif: any) => {
+    if (!notif.interestId) return;
+    setNotifLoading(l => ({ ...l, [notif.interestId + '_accept']: true }));
+    try {
+      await axios.post(`http://localhost:5000/users/interests/${notif.interestId}/accept`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setToastMsg('Interest accepted!');
+      setShowToast(true);
+      fetchNotifications();
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      setToastMsg('Failed to accept interest.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setNotifLoading(l => ({ ...l, [notif.interestId + '_accept']: false }));
+    }
+  };
+
+  const handleRejectInterest = async (notif: any) => {
+    if (!notif.interestId) return;
+    setNotifLoading(l => ({ ...l, [notif.interestId + '_reject']: true }));
+    try {
+      await axios.post(`http://localhost:5000/users/interests/${notif.interestId}/reject`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setToastMsg('Interest rejected.');
+      setShowToast(true);
+      fetchNotifications();
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      setToastMsg('Failed to reject interest.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setNotifLoading(l => ({ ...l, [notif.interestId + '_reject']: false }));
+    }
+  };
+
+  // Enhance notifications with loading state for Accept/Reject
+  const enhancedNotifications = (notifications as any[]).map(n =>
+    n.title === 'New Interest Received' && n.interestId
+      ? { ...n, loadingAccept: !!notifLoading[n.interestId + '_accept'], loadingReject: !!notifLoading[n.interestId + '_reject'] }
+      : n
+  );
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
   return (
     <div className="App">
+      <Navbar
+        onNavigate={navigate}
+        onLogout={handleLogout}
+        isManager={isManager}
+        unreadCount={unreadNotifications}
+        notifications={enhancedNotifications}
+        onNotificationClick={handleNotificationClick}
+        onAcceptInterest={handleAcceptInterest}
+        onRejectInterest={handleRejectInterest}
+      />
+      {/* Toast */}
       {showToast && (
         <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50">
           {toastMsg}
@@ -277,73 +367,57 @@ function App() {
         <Route path="/profile" element={<ProfilePage onProfileComplete={handleProfileComplete} />} />
         <Route path="/help-faq" element={<HelpFAQ />} />
         <Route path="/payment-methods" element={<PaymentMethods />} />
-        
         {/* Protected Routes */}
         <Route path="/dashboard" element={
           <PrivateRoute>
-            <>
-              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} unreadCount={unreadCount} />
-              <main className="flex-grow pb-8">
-                <UnifiedDashboardPage
-                  sentInterests={sentInterests}
-                  setSentInterests={setSentInterests}
-                  likedProfiles={likedProfiles}
-                  setLikedProfiles={setLikedProfiles}
-                  directChatProfiles={directChatProfiles}
-                  setDirectChatProfiles={setDirectChatProfiles}
-                  onNavigate={navigate}
-                  likeProfile={likeProfile}
-                  sendInterest={sendInterest}
-                  addDirectChatProfile={addDirectChatProfile}
-                />
-              </main>
-            </>
+            <main className="flex-grow pb-8">
+              <UnifiedDashboardPage
+                sentInterests={sentInterests}
+                setSentInterests={setSentInterests}
+                likedProfiles={likedProfiles}
+                setLikedProfiles={setLikedProfiles}
+                directChatProfiles={directChatProfiles}
+                setDirectChatProfiles={setDirectChatProfiles}
+                onNavigate={navigate}
+                likeProfile={likeProfile}
+                sendInterest={sendInterest}
+                addDirectChatProfile={addDirectChatProfile}
+              />
+            </main>
           </PrivateRoute>
         } />
-        <Route path="/dashboard/profile/:id" element={<ProfileDetailsModalWrapper />} />
+        <Route path="/dashboard/profile/:id" element={<ProfileDetailsModalWrapper onActionDone={loadUserInteractions} />} />
         <Route path="/matchlist" element={
           <PrivateRoute>
-            <>
-              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} unreadCount={unreadCount} />
-              <main className="flex-grow pb-8">
-                <Matchlist
-                  sentInterests={sentInterests}
-                  likedProfiles={likedProfiles}
-                  directChatProfiles={directChatProfiles}
-                  onNavigate={() => navigate}
-                />
-              </main>
-            </>
+            <main className="flex-grow pb-8">
+              <Matchlist
+                sentInterests={sentInterests}
+                likedProfiles={likedProfiles}
+                directChatProfiles={directChatProfiles}
+                onNavigate={() => navigate}
+              />
+            </main>
           </PrivateRoute>
         } />
         <Route path="/edit-profile" element={
           <PrivateRoute>
-            <>
-              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} unreadCount={unreadCount} />
-              <main className="flex-grow pb-8">
-                {isManager ? <ManagerProfilePage onProfileComplete={handleManagerProfileComplete} /> : <EditProfilePage />}
-              </main>
-            </>
+            <main className="flex-grow pb-8">
+              {isManager ? <ManagerProfilePage onProfileComplete={handleManagerProfileComplete} /> : <EditProfilePage />}
+            </main>
           </PrivateRoute>
         } />
         <Route path="/settings" element={
           <PrivateRoute>
-            <>
-              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={isManager} unreadCount={unreadCount} />
-              <main className="flex-grow pb-8">
-                <SettingsPage />
-              </main>
-            </>
+            <main className="flex-grow pb-8">
+              <SettingsPage />
+            </main>
           </PrivateRoute>
         } />
         <Route path="/manager" element={
           <PrivateRoute>
-            <>
-              <Navbar onNavigate={navigate} onLogout={handleLogout} isManager={true} unreadCount={unreadCount} />
-              <main className="flex-grow pb-8">
-                <ManagerProfileViewEdit />
-              </main>
-            </>
+            <main className="flex-grow pb-8">
+              <ManagerProfileViewEdit />
+            </main>
           </PrivateRoute>
         } />
         <Route path="/admin/*" element={

@@ -239,14 +239,11 @@ const UnifiedDashboardPage = ({
   };
 
   // Add a handler for payment selection
-  const handleSelectPayment = async (amount, profileId) => {
-    if (amount === 199 && sendInterest) {
-      // Send interest after payment
-      await sendInterest(profileId);
-    } else if (amount === 3000 && addDirectChatProfile) {
-      // Add to direct chat after payment
-      await addDirectChatProfile(profileId);
-    }
+  const handleSelectPayment = (amount, profileId) => {
+    // Only navigate to payment page, do not call any API here
+    setShowPaymentModal(false);
+    setInterestProfile(null);
+    navigate('/payment-methods', { state: { amount, profileId, hasSentInterest: sentInterests.includes(profileId) } });
   };
 
   useEffect(() => {
@@ -276,7 +273,12 @@ const UnifiedDashboardPage = ({
             />
           </button>
           <div className="relative cursor-pointer mb-4" onClick={() => handleViewMore(profile)}>
-            <img className="w-full h-60 object-cover" src={getPhotoUrl(profile.photos && profile.photos[0])} alt={profile.name} />
+            <img
+              className="w-60 h-60 object-cover rounded-lg"
+              style={{ objectPosition: 'top' }}
+              src={getPhotoUrl(profile.photos && profile.photos[0])}
+              alt={profile.name}
+            />
             {profile.verified && (
               <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full px-2 py-1 text-xs font-semibold">
                 Verified
