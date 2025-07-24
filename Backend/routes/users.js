@@ -327,134 +327,108 @@ router.post('/send-interest/:profileId', auth, async (req, res) => {
 // @desc    Add profile to direct chat (after payment)
 // @access  Private
 router.post('/direct-chat/:profileId', auth, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { profileId } = req.params;
-    // Enforce payment amount: only allow if amount === 3000
     const { amount } = req.body;
     if (amount !== 3000) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ msg: 'Direct chat is only allowed for payments of 3000.' });
     }
-    const user = await User.findById(req.user.id);
+
+    const user = await User.findById(req.user.id).session(session);
     if (!user) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Check if profile exists
-    const targetProfile = await User.findById(profileId);
+    const targetProfile = await User.findById(profileId).session(session);
     if (!targetProfile) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ msg: 'Profile not found' });
     }
 
-    // Log user's current state
-    console.log('Current user state:', {
-      userId: req.user.id,
-      directChatProfiles: user.directChatProfiles,
-      checkingProfileId: profileId
-    });
-
-    // Check for any existing transactions (both direct_chat and other types)
-    const allTransactions = await Transaction.find({
+    // Allow multiple payments for different users
+    // Only block if user already has direct chat with this profile and has paid
+    const existingDirectChatTx = await Transaction.findOne({
       userId: req.user.id,
       chatId: profileId,
+      type: 'direct_chat',
       status: 'completed'
-    });
+    }).session(session);
 
-    console.log('Found transactions:', allTransactions);
-
-    // Check if there's a direct chat transaction
-    const existingDirectChatTx = allTransactions.find(tx => tx.type === 'direct_chat');
-
-    // Check if there's only an interest transaction (199)
-    const onlyInterestTx = allTransactions.length === 1 && 
-                          allTransactions[0].type === 'other' && 
-                          allTransactions[0].amount === 199;
-
-    // Check if already in direct chat
-    if (user.directChatProfiles.includes(profileId)) {
-      if (onlyInterestTx) {
-        // This is a data inconsistency - user has direct chat access but only paid 199
-        console.log('Data inconsistency detected:', {
-          profileId,
-          transactions: allTransactions,
-          directChatAccess: true,
-          amount: 199
-        });
-        
-        // Remove from direct chat profiles if only interest payment exists
-        user.directChatProfiles = user.directChatProfiles.filter(id => id.toString() !== profileId.toString());
-        await user.save();
-        
-        console.log('Removed inconsistent direct chat access');
-      } else {
-        return res.status(400).json({ 
-          msg: 'Profile already in direct chat',
-          details: existingDirectChatTx ? 'Previous direct chat payment exists' : 'Added through different means'
-        });
-      }
+    if (user.directChatProfiles.includes(profileId) && existingDirectChatTx) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        msg: 'Profile already in direct chat',
+        details: 'Previous direct chat payment exists'
+      });
     }
 
-    // Create transaction record
-    const directChatTransaction = new Transaction({
-        userId: req.user.id,
-        amount: amount,
-        status: 'pending', // Start as pending until accepted
-        type: 'direct_chat',
-        chatId: profileId
+    // Create transaction record (pending)
+    const transaction = new Transaction({
+      userId: req.user.id,
+      amount: amount,
+      status: 'pending',
+      type: 'direct_chat',
+      chatId: profileId
     });
-    await directChatTransaction.save();
+    await transaction.save({ session });
+
+    // Add to direct chat profiles
+    if (!user.directChatProfiles.includes(profileId)) {
+      user.directChatProfiles.push(profileId);
+    }
+    if (!user.sentInterests.includes(profileId)) {
+      user.sentInterests.push(profileId);
+    }
+    await user.save({ session });
+
+    // Update transaction status to completed
+    transaction.status = 'completed';
+    await transaction.save({ session });
 
     // Create notification for direct chat request
-    const notification = await Notification.create({
+    const notification = await Notification.create([{
       title: 'Direct Chat Request',
       message: `${user.fullName || 'A user'} has requested to start a direct chat with you (₹3000 paid)`,
       type: 'direct_chat_request',
       recipients: [profileId],
       metadata: {
-        transactionId: directChatTransaction._id,
+        transactionId: transaction._id,
         senderId: user._id,
         amount: amount
       }
-    });
+    }], { session });
 
     // Send real-time notification
     const io = req.app.get('io');
     if (io) {
       io.to(profileId.toString()).emit('notification:new', {
-        title: notification.title,
-        message: notification.message,
+        title: notification[0].title,
+        message: notification[0].message,
         type: 'direct_chat_request',
-        notificationId: notification._id
+        notificationId: notification[0]._id
       });
     }
+
+    await session.commitTransaction();
+    session.endSession();
 
     res.json({
       success: true,
       msg: 'Direct chat access granted successfully',
-      transaction: directChatTransaction
-    });
-
-    // Create a transaction record
-    const transaction = new Transaction({
-        userId: req.user.id,
-        amount: amount,
-        status: 'completed',
-        type: 'direct_chat',
-        chatId: profileId
-    });
-    await transaction.save();
-    // Add to direct chat profiles
-    user.directChatProfiles.push(profileId);
-    // Also ensure profile is in sentInterests (idempotent)
-    if (!user.sentInterests.includes(profileId)) {
-      user.sentInterests.push(profileId);
-    }
-    await user.save();
-    
-    res.json({
-      directChatProfiles: user.directChatProfiles.map(id => id.toString()),
-      message: 'Profile added to direct chat successfully'
+      transaction,
+      directChatProfiles: user.directChatProfiles.map(id => id.toString())
     });
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     console.error(err.message);
     res.status(500).send('Server Error');
   }
@@ -521,33 +495,64 @@ router.post('/interests/:toUserId', auth, async (req, res) => {
   try {
     const { toUserId } = req.params;
     const { paymentAmount } = req.body;
+    const Transaction = require('../models/transaction.model');
+
+    // Define user (sender) before using
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
     if (![199, 3000].includes(Number(paymentAmount))) {
       return res.status(400).json({ msg: 'Invalid payment amount' });
     }
     if (toUserId === req.user.id) {
       return res.status(400).json({ msg: 'Cannot send interest to yourself' });
     }
-    const Transaction = require('../models/transaction.model');
 
     // Check for existing interest
     let interest = await Interest.findOne({ from: req.user.id, to: toUserId });
-    
-    // Check for existing transaction
-    const existingTransaction = await Transaction.findOne({
-      userId: req.user.id,
-      chatId: toUserId,
-      status: 'completed'
-    });
-
-    if (interest) {
-      return res.status(400).json({ 
-        msg: 'Interest already sent',
-        details: existingTransaction ? 'Previous transaction exists' : 'Interest sent through different means'
+    // If interest exists and is pending/accepted, block only if same paymentAmount
+    if (interest && ['pending', 'accepted'].includes(interest.status) && interest.paymentAmount === paymentAmount) {
+      return res.status(400).json({
+        msg: 'Interest already sent and awaiting response',
+        interestId: interest._id
       });
     }
 
+    // Check for existing transaction (block only if completed for direct_chat and paymentAmount is 3000)
+    let existingTransaction = null;
+    if (paymentAmount === 3000) {
+      existingTransaction = await Transaction.findOne({
+        userId: req.user.id,
+        chatId: toUserId,
+        type: 'direct_chat',
+        status: 'completed'
+      });
+      if (existingTransaction) {
+        return res.status(400).json({
+          msg: 'Direct chat payment already completed for this user',
+          transactionId: existingTransaction._id
+        });
+      }
+    } else if (paymentAmount === 199) {
+      // Block only if a completed subscription exists for this user-pair (optional, usually not needed)
+      existingTransaction = await Transaction.findOne({
+        userId: req.user.id,
+        type: 'subscription',
+        status: 'completed'
+      });
+      // If you want to allow multiple Rs199 payments, skip this block
+      // if (existingTransaction) {
+      //   return res.status(400).json({
+      //     msg: 'Subscription payment already completed for this user',
+      //     transactionId: existingTransaction._id
+      //   });
+      // }
+    }
+
     // Make sure user doesn't have direct chat access if only paying 199
-    if (paymentAmount === 199 && user.directChatProfiles.includes(toUserId)) {
+    if (paymentAmount === 199 && user.directChatProfiles && user.directChatProfiles.includes(toUserId)) {
       // Check if they have a direct chat transaction
       const directChatTx = await Transaction.findOne({
         userId: req.user.id,
@@ -564,32 +569,45 @@ router.post('/interests/:toUserId', auth, async (req, res) => {
       }
     }
 
-    interest = new Interest({ from: req.user.id, to: toUserId, paymentAmount });
+    // Create new interest
+    interest = new Interest({
+      from: req.user.id,
+      to: toUserId,
+      paymentAmount,
+      status: 'pending'
+    });
     await interest.save();
 
-    // Create transaction record
-    const transaction = new Transaction({
-        userId: req.user.id,
-        amount: paymentAmount,
-        status: 'completed',
-        type: 'other',
-        chatId: toUserId
-    });
-    await transaction.save();
-    
-    // Payment log
-    console.log(`[PAYMENT] Interest created: from=${req.user.id} to=${toUserId} paymentAmount=${paymentAmount}`);
-    // Send notification to toUserId
+    // Create corresponding notification with more metadata
     const sender = await User.findById(req.user.id);
     const notification = await Notification.create({
       title: 'New Interest Received',
       message: `${sender.fullName || 'A user'} has sent you an interest request!`,
-      mediaType: 'none',
-      type: 'event',
+      type: 'interest_received',
       recipients: [toUserId],
-      from: req.user.id, // Add sender's userId for frontend navigation
-      interestId: interest._id // Add interestId for frontend navigation
+      metadata: {
+        interestId: interest._id,
+        senderId: req.user.id,
+        senderName: sender.fullName || '',
+        senderPhoto: sender.photos && sender.photos.length ? sender.photos[0] : '',
+        paymentAmount,
+        timestamp: new Date()
+      }
     });
+
+    // Create transaction record
+    const transaction = new Transaction({
+      userId: req.user.id,
+      amount: paymentAmount,
+      status: 'pending',
+      type: paymentAmount === 3000 ? 'direct_chat' : 'subscription',
+      chatId: null
+    });
+    await transaction.save();
+
+    // Payment log
+    console.log(`[PAYMENT] Interest created: from=${req.user.id} to=${toUserId} paymentAmount=${paymentAmount}`);
+
     // Emit real-time notification
     const io = req.app.get('io');
     if (io) {
@@ -597,11 +615,13 @@ router.post('/interests/:toUserId', auth, async (req, res) => {
         title: notification.title,
         message: notification.message,
         notificationId: notification._id,
+        metadata: notification.metadata,
         from: req.user.id,
         interestId: interest._id
       });
     }
-    res.json({ success: true, interest });
+    // Return interest and transaction for frontend redirect
+    res.json({ success: true, interest, transaction });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -654,6 +674,12 @@ router.post('/interests/:interestId/accept', auth, async (req, res) => {
     }, {
       $set: { status: 'actioned' }
     });
+    // Fetch the updated notification for this interest
+    const updatedNotification = await Notification.findOne({
+      type: 'interest_received',
+      'metadata.interestId': interestId,
+      recipients: req.user.id
+    });
     // Add each other to sentInterests if not already present
     const sender = await User.findById(interest.from);
     const recipient = await User.findById(interest.to);
@@ -683,7 +709,7 @@ router.post('/interests/:interestId/accept', auth, async (req, res) => {
         notificationId: notification._id
       });
     }
-    res.json({ success: true, interest });
+    res.json({ success: true, interest, updatedNotification });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -701,6 +727,16 @@ router.post('/interests/:interestId/reject', auth, async (req, res) => {
     }
     interest.status = 'rejected';
     await interest.save();
+    
+    // Delete the notification for this interest
+    await Notification.deleteMany({
+      type: 'interest_received',
+      'metadata.interestId': interestId,
+      recipients: req.user.id
+    });
+    // Return null for updatedNotification since it is deleted
+    const updatedNotification = null;
+
     // Notify sender
     const recipient = await User.findById(req.user.id);
     const notification = await Notification.create({
@@ -719,7 +755,7 @@ router.post('/interests/:interestId/reject', auth, async (req, res) => {
         notificationId: notification._id
       });
     }
-    res.json({ success: true, interest });
+    res.json({ success: true, interest, updatedNotification });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });

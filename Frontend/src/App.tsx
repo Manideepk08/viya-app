@@ -151,9 +151,21 @@ function App() {
     const userId = localStorage.getItem('userId');
     if (!userId) return;
     try {
-      const res = await axios.get(`http://localhost:5000/notifications/for/${userId}`);
-      setNotifications(res.data);
+      const res = await axios.get(`http://localhost:5000/notifications/for/${userId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Process notifications to ensure metadata is properly structured
+      const processedNotifications = res.data.map((notif: any) => ({
+        ...notif,
+        interestId: notif.metadata?.interestId || notif.interestId,
+        senderId: notif.metadata?.senderId || notif.from,
+        timestamp: notif.metadata?.timestamp || notif.createdAt
+      }));
+      
+      setNotifications(processedNotifications);
     } catch (err) {
+      console.error('Failed to fetch notifications:', err);
       setNotifications([]);
     }
   };
@@ -290,22 +302,32 @@ function App() {
   const [notifLoading, setNotifLoading] = useState<Record<string, boolean>>({});
 
   const handleAcceptInterest = async (notif: any) => {
-    if (!notif.interestId) return;
-    setNotifLoading(l => ({ ...l, [notif.interestId + '_accept']: true }));
+    const interestId = notif.metadata?.interestId || notif.interestId;
+    if (!interestId) {
+      setToastMsg('Invalid notification: No interest ID found');
+      setShowToast(true);
+      return;
+    }
+
+    setNotifLoading(l => ({ ...l, [interestId + '_accept']: true }));
     try {
-      await axios.post(`http://localhost:5000/users/interests/${notif.interestId}/accept`, {}, {
+      await axios.post(`http://localhost:5000/users/interests/${interestId}/accept`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      
+      // Force reload notifications immediately
+      await fetchNotifications();
+      
       setToastMsg('Interest accepted!');
       setShowToast(true);
-      fetchNotifications();
       setTimeout(() => setShowToast(false), 3000);
-    } catch (err) {
-      setToastMsg('Failed to accept interest.');
+    } catch (err: any) {
+      console.error('Error accepting interest:', err);
+      setToastMsg(err.response?.data?.msg || 'Failed to accept interest.');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } finally {
-      setNotifLoading(l => ({ ...l, [notif.interestId + '_accept']: false }));
+      setNotifLoading(l => ({ ...l, [interestId + '_accept']: false }));
     }
   };
 

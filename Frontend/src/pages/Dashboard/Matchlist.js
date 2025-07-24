@@ -13,7 +13,7 @@ const getPhotoUrl = (photo) => {
   return photo.startsWith('/uploads') ? `http://localhost:5000${photo}` : photo;
 };
 
-const Matchlist = ({ sentInterests = [], likedProfiles = [], directChatProfiles = [], onNavigate = (path) => {} }) => {
+function Matchlist({ sentInterests = [], likedProfiles = [], directChatProfiles = [], onNavigate = (path) => {} }) {
   const userId = localStorage.getItem('userId');
   const [activeTab, setActiveTab] = useState('sent');
   const [chatProfile, setChatProfile] = useState(() => {
@@ -388,12 +388,17 @@ useEffect(() => {
 
   // Accept/Reject handlers (to show toast)
   const handleAcceptInterest = async (interestId) => {
-    // ... call backend to accept ...
-    setActionToastMsg('Interest accepted!');
-    setShowActionToast(true);
-    // After accepting, fetch sentInterests and ensure all profiles are loaded
     try {
       const token = localStorage.getItem('token');
+      // Call backend to accept interest
+      await axios.post(`http://localhost:5000/users/interests/${interestId}/accept`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setActionToastMsg('Interest accepted!');
+      setShowActionToast(true);
+      
+      // After accepting, fetch sentInterests and ensure all profiles are loaded
       const res = await axios.get('http://localhost:5000/users/interactions', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -405,14 +410,29 @@ useEffect(() => {
           setAllProfiles(prev => [...prev, userRes.data]);
         }
       }
-    } catch (err) {}
-    setTimeout(() => setShowActionToast(false), 2500);
+      setTimeout(() => setShowActionToast(false), 2500);
+    } catch (err) {
+      console.error(err);
+      setActionToastMsg('Failed to accept interest');
+      setShowActionToast(true);
+    }
   };
   const handleRejectInterest = async (interestId) => {
-    // ... call backend to reject ...
-    setActionToastMsg('Interest rejected.');
-    setShowActionToast(true);
-    setTimeout(() => setShowActionToast(false), 2500);
+    try {
+      const token = localStorage.getItem('token');
+      // Call backend to reject interest
+      await axios.post(`http://localhost:5000/users/interests/${interestId}/reject`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setActionToastMsg('Interest rejected.');
+      setShowActionToast(true);
+      setTimeout(() => setShowActionToast(false), 2500);
+    } catch (err) {
+      console.error(err);
+      setActionToastMsg('Failed to reject interest');
+      setShowActionToast(true);
+    }
   };
 
   const renderProfiles = (profiles, emptyMsg, showChat = false) => {
